@@ -333,9 +333,9 @@ function genNodos(){
 function seed(){return{
  meta:{
   tipos:[
-   {id:'proyecto',nombre:'Proyecto',icono:'-',formId:'f_proyecto',hijos:['proyecto','etapa','tarea'],columnas:['estado','responsable','fecha_fin'],archivos:true},
-   {id:'etapa',nombre:'Etapa',icono:'-',formId:'f_etapa',hijos:['etapa','tarea'],columnas:['estado','avance','fecha_fin'],archivos:true},
-   {id:'tarea',nombre:'Tarea',icono:'-',formId:'f_tarea',hijos:[],columnas:['estado','prioridad','responsable','fecha_limite'],archivos:true}
+   {id:'proyecto',nombre:'Proyecto',icono:'',formId:'f_proyecto',hijos:['proyecto','etapa','tarea'],columnas:['estado','responsable','fecha_fin'],archivos:true},
+   {id:'etapa',nombre:'Etapa',icono:'',formId:'f_etapa',hijos:['etapa','tarea'],columnas:['estado','avance','fecha_fin'],archivos:true},
+   {id:'tarea',nombre:'Tarea',icono:'',formId:'f_tarea',hijos:[],columnas:['estado','prioridad','responsable','fecha_limite'],archivos:true}
   ],
   formularios:{
    f_proyecto:{id:'f_proyecto',nombre:'Ficha de proyecto',campos:[
@@ -419,14 +419,15 @@ function seed(){return{
  }
 }}
 let S;
-const VERSION=2;
+const VERSION=3;
 function load(){try{const r=localStorage.getItem(LS);S=r?JSON.parse(r):seed()}catch(e){S=seed()}
- /* migración: conserva las definiciones del usuario, pero carga los datos de ejemplo nuevos */
- if((S.version||1)<VERSION){const sd=seed();S.datos=sd.datos;S.meta.tipos.forEach(t=>{t.icono='-';t.archivos=t.archivos!==false});
+ /* migraciones: conservan las definiciones del usuario y ajustan solo lo necesario */
+ const v=S.version||1;
+ if(v<2){const sd=seed();S.datos=sd.datos;S.meta.tipos.forEach(t=>{t.archivos=t.archivos!==false});
   const tp=S.meta.tipos.find(t=>t.id==='proyecto');if(tp&&!tp.hijos.includes('tarea'))tp.hijos.push('tarea');
-  const fp=S.meta.formularios.f_proyecto;if(fp&&!fp.campos.some(c=>c.key==='contrato_firmado'))fp.campos.push(sd.meta.formularios.f_proyecto.campos.find(c=>c.key==='contrato_firmado'));
-  S.version=VERSION;save()}
- if(!S.version){S.version=VERSION}}
+  const fp=S.meta.formularios.f_proyecto;if(fp&&!fp.campos.some(c=>c.key==='contrato_firmado'))fp.campos.push(sd.meta.formularios.f_proyecto.campos.find(c=>c.key==='contrato_firmado'))}
+ if(v<3){S.meta.tipos.forEach(t=>{t.icono=''})}
+ if(v<VERSION){S.version=VERSION;save()}}
 function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
 
@@ -497,7 +498,7 @@ const abiertos=new Set(); /* nodos desplegados en el árbol; se conserva mientra
 function vArbol(){
  setTop(`<span class="cur">Proyectos</span>`,designBtn('#/tipos','Diseñar tipos y jerarquía',TIP.arbolTipos));
  const rec=pid=>{const hs=hijos(pid);if(!hs.length)return '';return `<ul ${pid&&!abiertos.has(pid)?'hidden':''}>`+hs.map(n=>{const t=tipo(n.tipo);const fe=campoDe(n.tipo,'estado');const c=hijos(n.id).length;
-  return `<li><div class="row"><span class="tg" ${c?`onclick="A.plegar(this,'${n.id}')" style="cursor:pointer" data-tip="Pliega o despliega los internos de este nodo. Por defecto todo está plegado. Este triángulo es fijo del sistema (parte de la vista de árbol); no se define en ninguna pantalla."`:''}>${c?(abiertos.has(n.id)?'▾':'▸'):''}</span><span class="ic" data-tip="${esc(`Ícono del tipo "${t?.nombre||n.tipo}". Se cambia en Configuración › Tipos de nodo, en la casilla pequeña a la izquierda del nombre del tipo. Acepta cualquier carácter o emoji.`)}">${esc(t?.icono||'')}</span><a href="#/nodo/${n.id}">${esc(n.nombre)}</a><span class="badge" data-tip="${esc(TIP.tipoNodo)}">${esc(t?.nombre||n.tipo)}</span><span class="code" data-tip="${esc(TIP.codigo)}">${esc(n.codigo)}</span>${fe&&n.datos.estado?`<span data-tip="${esc(TIP.chipEstado)}">${chip(fe,n.datos.estado)}</span>`:''}${c?`<span class="cnt" data-tip="${esc(TIP.internos)}">${c} interno${c>1?'s':''}</span>`:''}</div>${rec(n.id)}</li>`}).join('')+'</ul>'};
+  return `<li><div class="row"><span class="tg" ${c?`onclick="A.plegar(this,'${n.id}')" style="cursor:pointer" data-tip="Pliega o despliega los internos de este nodo. Por defecto todo está plegado. Este triángulo es fijo del sistema (parte de la vista de árbol); no se define en ninguna pantalla."`:''}>${c?(abiertos.has(n.id)?'▾':'▸'):''}</span>${t?.icono?`<span class="ic" data-tip="${esc(`Ícono del tipo "${t.nombre}". Se cambia en Configuración › Tipos de nodo, en la casilla pequeña a la izquierda del nombre del tipo. Acepta cualquier carácter o emoji; vacío = sin ícono.`)}">${esc(t.icono)}</span>`:''}<a href="#/nodo/${n.id}">${esc(n.nombre)}</a><span class="badge" data-tip="${esc(TIP.tipoNodo)}">${esc(t?.nombre||n.tipo)}</span><span class="code" data-tip="${esc(TIP.codigo)}">${esc(n.codigo)}</span>${fe&&n.datos.estado?`<span data-tip="${esc(TIP.chipEstado)}">${chip(fe,n.datos.estado)}</span>`:''}${c?`<span class="cnt" data-tip="${esc(TIP.internos)}">${c} interno${c>1?'s':''}</span>`:''}</div>${rec(n.id)}</li>`}).join('')+'</ul>'};
  const raiz=S.meta.tipos.filter(t=>t.id==='proyecto'||!S.meta.tipos.some(o=>o.hijos.includes(t.id)));
  view(`<div class="page-head"><div><h1>Proyectos ${q('Vista principal del sistema: el árbol completo. Cada fila es un nodo; su tipo (Proyecto, Etapa, Tarea…) aparece en la etiqueta azul y su código jerárquico en gris. Haz clic en el nombre para abrir su ficha.')}</h1><div class="meta">Un proyecto puede contener proyectos, etapas o tareas, sin límite de profundidad. La jerarquía permitida se define en <a href="#/tipos">Tipos de nodo</a>.</div></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="A.desplegarTodo()" data-tip="Despliega todos los niveles del árbol de una vez.">Desplegar todo</button><button class="btn" onclick="A.plegarTodo()" data-tip="Pliega todo: queda solo la lista de proyectos raíz.">Plegar todo</button>${raiz.map(t=>`<button class="btn pri" onclick="A.nuevoNodo(null,'${t.id}')" data-tip="${esc(TIP.arbolNuevo)}">+ Nuevo ${esc(t.nombre.toLowerCase())}</button>`).join(' ')}</div></div>
