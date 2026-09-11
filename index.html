@@ -111,6 +111,21 @@ td a{text-decoration:none;font-weight:500}
 .tree .tg{width:16px;color:var(--muted);font-size:11px}
 .tree .ic{color:var(--accent);width:16px;text-align:center}
 .tree .cnt{font-size:11.5px;color:var(--muted)}
+.nodo-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px;align-items:start}
+.nodo-layout.sin-arbol{grid-template-columns:minmax(0,1fr)}
+.explorador{position:sticky;top:62px;max-height:calc(100vh - 84px);overflow:auto;padding:10px 8px}
+.explorador .exp-head{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 6px 8px;margin-bottom:6px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
+.explorador .exp-head b{color:var(--ink);font-weight:600}
+.explorador .exp-head a{font-size:11.5px;text-decoration:none}
+.explorador ul{padding-left:14px}
+.explorador .row{padding:4px 6px;gap:5px;font-size:13px}
+.explorador .row a{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:400;min-width:0}
+.explorador .row.cur{background:var(--accent-soft)}
+.explorador .row.cur a{color:var(--accent);font-weight:600}
+.explorador .tg{flex:none}
+.explorador .dot{flex:none;width:8px;height:8px;border-radius:50%;display:inline-block}
+.explorador .cnt{margin-left:auto;font-size:11px;flex:none}
+@media (max-width:900px){.nodo-layout{grid-template-columns:minmax(0,1fr)}.explorador{position:static;max-height:240px}}
 /* designer rows */
 .drow{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:start;padding:10px 0;border-bottom:1px solid var(--line)}
 .drow:last-child{border-bottom:0}
@@ -213,6 +228,7 @@ const TIP={
  renombrar:'Cambiar el nombre del nodo. El cambio queda registrado en el historial.',
  eliminar:'Elimina este nodo y TODO lo que contiene (sus internos y sus archivos). En el sistema real esto debería ir a una papelera; en la demo es definitivo.',
  btnDisenar:'Abre la definición de la pantalla que estás viendo, en "modo diseño". Ahí puedes agregar campos, cambiar su tipo, reordenarlos, ocultarlos o ponerles condiciones. Al volver, la pantalla ya está cambiada. Es la forma de construir el sistema frente al cliente.',
+ arbolPanel:'Panel de navegación que acompaña a la ficha. Muestra el árbol completo con la rama del nodo actual desplegada y el nodo resaltado, para moverse a un hermano, subir o bajar sin volver a la vista Proyectos. El punto de color es el estado; pasa el mouse por un nombre para ver tipo y código. Se puede ocultar y el sistema recuerda la elección en este navegador.',
  arbolNuevo:'Crea un proyecto en el nivel raíz (sin padre). Para crear algo dentro de un proyecto, entra al proyecto y usa la pestaña "Internos".',
  arbolTipos:'Abre Tipos de nodo, donde se define qué clases de elementos existen (Proyecto, Etapa, Tarea…) y cuál puede contener a cuál.',
  chipEstado:'Valor del campo "estado" del nodo, mostrado con el color definido en la Lista de opciones "Estados". Si a la pantalla del tipo le quitas el campo estado, este chip deja de mostrarse.',
@@ -505,15 +521,20 @@ const designBtn=(href,txt,tip)=>`<a class="btn design" href="${href}" data-tip="
 const designBar=txt=>`<div class="design-bar"><b data-tip="${esc(TIP.diseñoBar)}">Modo diseño</b><span>${txt} Los cambios se aplican de inmediato y quedan escritos en el JSON de definición. Pasa el mouse por cualquier <span class="q" style="margin:0">?</span> para saber qué es cada cosa.</span></div>`;
 
 /* ============ vista: árbol ============ */
+let arbolVisible=true;try{arbolVisible=localStorage.getItem(LS+'-arbol')!=='0'}catch(e){} /* panel de árbol junto a la ficha */
 const abiertos=new Set(); /* nodos desplegados en el árbol; se conserva mientras navegas */
+/* Dibuja el árbol desde pid. opt.compacto: filas cortas para el panel lateral; opt.actual: id del nodo resaltado */
+function arbolHtml(pid,opt={}){const hs=hijos(pid);if(!hs.length)return '';return `<ul ${pid&&!abiertos.has(pid)?'hidden':''}>`+hs.map(n=>{const t=tipo(n.tipo);const fe=campoDe(n.tipo,'estado');const c=hijos(n.id).length;
+  const tg=`<span class="tg" ${c?`onclick="A.plegar(this,'${n.id}')" style="cursor:pointer" data-tip="Pliega o despliega los internos de este nodo. Por defecto todo está plegado. Este triángulo es fijo del sistema (parte de la vista de árbol); no se define en ninguna pantalla."`:''}>${c?(abiertos.has(n.id)?'▾':'▸'):''}</span>`;
+  if(opt.compacto){const o=fe&&n.datos.estado?etiquetaOpcion(fe,n.datos.estado):null;
+   return `<li><div class="row ${n.id===opt.actual?'cur':''}">${tg}${o?`<i class="dot" style="background:${esc(o.color||'var(--muted)')}" data-tip="${esc(o.etiqueta)}"></i>`:''}<a href="#/nodo/${n.id}" data-tip="${esc((t?.nombre||n.tipo)+' · '+n.codigo)}">${esc(n.nombre)}</a>${c?`<span class="cnt" data-tip="${esc(TIP.internos)}">${c}</span>`:''}</div>${arbolHtml(n.id,opt)}</li>`}
+  return `<li><div class="row"><span class="tg" ${c?`onclick="A.plegar(this,'${n.id}')" style="cursor:pointer" data-tip="Pliega o despliega los internos de este nodo. Por defecto todo está plegado. Este triángulo es fijo del sistema (parte de la vista de árbol); no se define en ninguna pantalla."`:''}>${c?(abiertos.has(n.id)?'▾':'▸'):''}</span>${t?.icono?`<span class="ic" data-tip="${esc(`Ícono del tipo "${t.nombre}". Se cambia en Configuración › Tipos de nodo, en la casilla pequeña a la izquierda del nombre del tipo. Acepta cualquier carácter o emoji; vacío = sin ícono.`)}">${esc(t.icono)}</span>`:''}<a href="#/nodo/${n.id}">${esc(n.nombre)}</a><span class="badge" data-tip="${esc(TIP.tipoNodo)}">${esc(t?.nombre||n.tipo)}</span><span class="code" data-tip="${esc(TIP.codigo)}">${esc(n.codigo)}</span>${fe&&n.datos.estado?`<span data-tip="${esc(TIP.chipEstado)}">${chip(fe,n.datos.estado)}</span>`:''}${c?`<span class="cnt" data-tip="${esc(TIP.internos)}">${c} interno${c>1?'s':''}</span>`:''}</div>${arbolHtml(n.id,opt)}</li>`}).join('')+'</ul>'}
 function vArbol(){
  setTop(`<span class="cur">Proyectos</span>`,designBtn('#/tipos','Diseñar tipos y jerarquía',TIP.arbolTipos));
- const rec=pid=>{const hs=hijos(pid);if(!hs.length)return '';return `<ul ${pid&&!abiertos.has(pid)?'hidden':''}>`+hs.map(n=>{const t=tipo(n.tipo);const fe=campoDe(n.tipo,'estado');const c=hijos(n.id).length;
-  return `<li><div class="row"><span class="tg" ${c?`onclick="A.plegar(this,'${n.id}')" style="cursor:pointer" data-tip="Pliega o despliega los internos de este nodo. Por defecto todo está plegado. Este triángulo es fijo del sistema (parte de la vista de árbol); no se define en ninguna pantalla."`:''}>${c?(abiertos.has(n.id)?'▾':'▸'):''}</span>${t?.icono?`<span class="ic" data-tip="${esc(`Ícono del tipo "${t.nombre}". Se cambia en Configuración › Tipos de nodo, en la casilla pequeña a la izquierda del nombre del tipo. Acepta cualquier carácter o emoji; vacío = sin ícono.`)}">${esc(t.icono)}</span>`:''}<a href="#/nodo/${n.id}">${esc(n.nombre)}</a><span class="badge" data-tip="${esc(TIP.tipoNodo)}">${esc(t?.nombre||n.tipo)}</span><span class="code" data-tip="${esc(TIP.codigo)}">${esc(n.codigo)}</span>${fe&&n.datos.estado?`<span data-tip="${esc(TIP.chipEstado)}">${chip(fe,n.datos.estado)}</span>`:''}${c?`<span class="cnt" data-tip="${esc(TIP.internos)}">${c} interno${c>1?'s':''}</span>`:''}</div>${rec(n.id)}</li>`}).join('')+'</ul>'};
  const raiz=S.meta.tipos.filter(t=>t.id==='proyecto'||!S.meta.tipos.some(o=>o.hijos.includes(t.id)));
  view(`<div class="page-head"><div><h1>Proyectos ${q('Vista principal del sistema: el árbol completo. Cada fila es un nodo; su tipo (Proyecto, Etapa, Tarea…) aparece en la etiqueta azul y su código jerárquico en gris. Haz clic en el nombre para abrir su ficha.')}</h1><div class="meta">Un proyecto puede contener proyectos, etapas o tareas, sin límite de profundidad. La jerarquía permitida se define en <a href="#/tipos">Tipos de nodo</a>.</div></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="A.desplegarTodo()" data-tip="Despliega todos los niveles del árbol de una vez.">Desplegar todo</button><button class="btn" onclick="A.plegarTodo()" data-tip="Pliega todo: queda solo la lista de proyectos raíz.">Plegar todo</button>${raiz.map(t=>`<button class="btn pri" onclick="A.nuevoNodo(null,'${t.id}')" data-tip="${esc(TIP.arbolNuevo)}">+ Nuevo ${esc(t.nombre.toLowerCase())}</button>`).join(' ')}</div></div>
-  <div class="card tree">${rec(null)||'<div class="empty">Aún no hay proyectos.</div>'}</div>`);
+  <div class="card tree">${arbolHtml(null)||'<div class="empty">Aún no hay proyectos.</div>'}</div>`);
 }
 
 /* ============ vista: nodo ============ */
@@ -521,7 +542,8 @@ function vNodo(id,tab){
  const n=nodo(id);if(!n){location.hash='#/arbol';return}
  const t=tipo(n.tipo);const f=form(t.formId);
  const crumbs=`<a href="#/arbol">Proyectos</a>`+ancestros(id).map(a=>`<span class="sep">›</span><a href="#/nodo/${a.id}">${esc(a.nombre)}</a>`).join('')+`<span class="sep">›</span><span class="cur">${esc(n.nombre)}</span>`;
- setTop(crumbs,designBtn('#/form/'+t.formId));
+ ancestros(id).forEach(a=>abiertos.add(a.id));if(hijos(id).length)abiertos.add(id); /* la rama del nodo actual siempre se ve en el panel */
+ setTop(crumbs,`<button class="btn sm" onclick="A.arbolToggle()" data-tip="${esc(TIP.arbolPanel)}">${arbolVisible?'Ocultar árbol':'Mostrar árbol'}</button> `+designBtn('#/form/'+t.formId));
  const admiteArchivos=t.archivos!==false;if(tab==='archivos'&&!admiteArchivos)tab='datos';
  const nh=hijos(id).length,na=archivosDe(id).length,nhi=S.datos.historial.filter(h=>h.nodoId===id).length;
  const tabs=[['datos','Datos','',TIP.tabDatos],['hijos','Internos',nh,TIP.tabHijos],...(admiteArchivos?[['archivos','Archivos',na,TIP.tabArchivos]]:[]),['historial','Historial',nhi,TIP.tabHistorial]].map(([k,l,c,tp])=>`<a href="#/nodo/${id}/${k}" class="${tab===k?'on':''}" data-tip="${esc(tp)}">${l}${c!==''?`<span class="n">${c}</span>`:''}</a>`).join('');
@@ -551,8 +573,10 @@ function vNodo(id,tab){
   const hs=S.datos.historial.filter(h=>h.nodoId===id);
   body=`<div class="card hist"><h2>Cambios registrados ${q(TIP.tabHistorial)}</h2>${hs.length?`<div class="tbl-wrap"><table><thead><tr><th>Cuándo</th><th>Campo ${q('Etiqueta actual del campo que cambió. Se busca por su clave interna, así que aunque renombres el campo el historial sigue mostrándolo bien.')}</th><th>Antes</th><th>Después</th></tr></thead><tbody>${hs.map(h=>`<tr><td class="t">${esc(h.fecha)}</td><td>${esc(campoDe(n.tipo,h.campo)?.label||h.campo)}</td><td>${esc(h.antes)}</td><td>${esc(h.despues)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin cambios registrados.</div>'}</div>`;
  }
- view(`<div class="page-head"><div><h1>${esc(n.nombre)} <button class="btn ghost sm" onclick="A.renombrar('${id}')" data-tip="${esc(TIP.renombrar)}">✎</button></h1><div class="meta"><span class="badge" data-tip="${esc(TIP.tipoNodo)}">${esc(t.nombre)}</span> <span class="code" data-tip="${esc(TIP.codigo)}">${esc(n.codigo)}</span> · <span data-tip="${esc(TIP.creado)}">creado ${esc(n.creado)}</span></div></div>
-  <div><button class="btn danger" onclick="A.borrarNodo('${id}')" data-tip="${esc(TIP.eliminar)}">Eliminar</button></div></div><div class="tabs">${tabs}</div>${body}`);
+ const panel=arbolVisible?`<aside class="card tree explorador"><div class="exp-head"><b>Árbol ${q(TIP.arbolPanel)}</b><a href="#/arbol" data-tip="Abre la vista completa del árbol, con tipo, código y estado de cada nodo.">Ver completo</a></div>${arbolHtml(null,{compacto:true,actual:id})}</aside>`:'';
+ view(`<div class="nodo-layout ${arbolVisible?'':'sin-arbol'}">${panel}<div class="nodo-main"><div class="page-head"><div><h1>${esc(n.nombre)} <button class="btn ghost sm" onclick="A.renombrar('${id}')" data-tip="${esc(TIP.renombrar)}">✎</button></h1><div class="meta"><span class="badge" data-tip="${esc(TIP.tipoNodo)}">${esc(t.nombre)}</span> <span class="code" data-tip="${esc(TIP.codigo)}">${esc(n.codigo)}</span> · <span data-tip="${esc(TIP.creado)}">creado ${esc(n.creado)}</span></div></div>
+  <div><button class="btn danger" onclick="A.borrarNodo('${id}')" data-tip="${esc(TIP.eliminar)}">Eliminar</button></div></div><div class="tabs">${tabs}</div>${body}</div></div>`);
+ document.querySelector('.explorador .row.cur')?.scrollIntoView({block:'nearest'});
  if(tab==='datos')aplicarCondiciones(f);
 }
 
@@ -779,6 +803,7 @@ const A={
  plegar(el,id){const ul=el.closest('li').querySelector(':scope > ul');if(!ul)return;ul.hidden=!ul.hidden;el.textContent=ul.hidden?'▸':'▾';if(ul.hidden)abiertos.delete(id);else abiertos.add(id)},
  desplegarTodo(){S.datos.nodos.forEach(n=>{if(hijos(n.id).length)abiertos.add(n.id)});refresh()},
  plegarTodo(){abiertos.clear();refresh()},
+ arbolToggle(){arbolVisible=!arbolVisible;try{localStorage.setItem(LS+'-arbol',arbolVisible?'1':'0')}catch(e){}refresh()},
  /* nodos */
  nuevoNodo(parentId,tid){const t=tipo(tid);const nombre=prompt(`Nombre de la nueva ${t.nombre.toLowerCase()}:`);if(!nombre)return;const n={id:uid(),tipo:tid,parentId,codigo:siguienteCodigo(parentId,tid),nombre,creado:hoy(),datos:{}};S.datos.nodos.push(n);save();location.hash='#/nodo/'+n.id;toast('Creado '+n.codigo)},
  renombrar(id){const n=nodo(id);const v=prompt('Nuevo nombre:',n.nombre);if(v&&v!==n.nombre){hist(id,'nombre',n.nombre,v);n.nombre=v;save();refresh()}},
