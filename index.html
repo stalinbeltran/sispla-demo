@@ -132,6 +132,16 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padd
 .list a.item.on{color:var(--accent)}
 .hist{font-size:13px}.hist .t{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
 .empty{color:var(--muted);font-style:italic;padding:12px 0}
+.q{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--muted);color:var(--muted);font-size:10px;font-weight:600;margin-left:5px;cursor:help;vertical-align:middle;line-height:1;flex:none;font-family:var(--sans);text-transform:none;letter-spacing:0}
+.q:hover,.q:focus{border-color:var(--accent);color:var(--accent);outline:none}
+#tip{position:fixed;z-index:50;display:none;background:var(--ink);color:var(--bg);padding:10px 13px;border-radius:6px;font-size:12.5px;line-height:1.5;box-shadow:var(--shadow);white-space:pre-line;pointer-events:none;font-weight:400;font-family:var(--sans);text-transform:none;letter-spacing:0;text-align:left}
+#tip b{color:var(--design)}
+.hint{font-size:12px;color:var(--muted);background:var(--panel2);border-left:3px solid var(--line);padding:5px 9px;border-radius:0 4px 4px 0;flex-basis:100%}
+.hint b{color:var(--ink)}
+.glos dt{font-weight:600;margin-top:12px}.glos dd{margin:2px 0 0 0;color:var(--muted)}
+.tag{display:inline-block;font-size:10.5px;padding:0 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;vertical-align:middle}
+.tag.fijo{background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+.tag.def{background:var(--design-soft);color:var(--design)}
 #toast{position:fixed;bottom:18px;right:18px;background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
 #toast.show{opacity:1}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
@@ -146,7 +156,7 @@ input[type=color]{width:28px;height:24px;padding:0;border:1px solid var(--line);
   <aside>
     <div class="brand"><b>SisPla</b><span>Proyectos multinivel · demo</span></div>
     <nav id="nav"></nav>
-    <div class="side-foot">Todo lo que ves se genera desde el JSON de definición. Los cambios se guardan en este navegador.<br><button onclick="A.reset()">Restablecer demo</button></div>
+    <div class="side-foot">Todo lo que ves se genera desde el JSON de definición. Los cambios se guardan en este navegador.<br><a href="#/ayuda" style="color:var(--side-ink)">Ayuda y glosario</a><br><button onclick="A.reset()" data-tip="Borra todo lo que hayas cambiado en este navegador (datos y definiciones) y vuelve al ejemplo inicial de la demo. No afecta a nadie más: la demo vive solo en tu navegador.">Restablecer demo</button></div>
   </aside>
   <main>
     <header><div class="crumbs" id="crumbs"></div><div id="topbtn"></div></header>
@@ -162,8 +172,126 @@ const uid=()=>'n'+Math.random().toString(36).slice(2,8);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const slug=s=>(String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''))||'campo';
 const hoy=()=>new Date().toISOString().slice(0,10);
+/* ---- Vocabulario fijo del sistema (viene programado; no se define desde las pantallas) ---- */
 const TIPOS_CAMPO={texto:'Texto',textolargo:'Texto largo',numero:'Número',fecha:'Fecha',lista:'Lista desplegable',radio:'Botones de opción',checkbox:'Casilla (sí/no)',multiple:'Selección múltiple',referencia:'Referencia a otro nodo'};
-const CONFIG_PANTALLAS={formularios:'Pantallas (formularios)',tipos:'Tipos de nodo',catalogos:'Listas de opciones',menu:'Menú',json:'JSON del sistema'};
+const TIPOS_CAMPO_DESC={
+ texto:'Una sola línea de texto libre: nombres, códigos, correos, montos con formato propio.',
+ textolargo:'Varias líneas de texto: descripciones, observaciones, alcance.',
+ numero:'Solo admite números. En los reportes, al agrupar, los campos numéricos se suman solos.',
+ fecha:'Un selector de calendario. Se guarda como AAAA-MM-DD, lo que permite ordenar y filtrar por fecha.',
+ lista:'Un desplegable donde se elige UNA opción. Las opciones vienen de una "Lista de opciones" compartida (recomendado) o se escriben en el propio campo.',
+ radio:'Igual que la lista desplegable, pero todas las opciones se ven a la vez y se marca una sola (botones de opción). Conviene cuando hay 2 a 5 opciones.',
+ checkbox:'Una única casilla sí/no. Se guarda como verdadero o falso. En una condición "mostrar solo si" se compara con el texto true o false.',
+ multiple:'Varias casillas de las que se pueden marcar varias a la vez. Se guarda como lista de valores (por ejemplo ["planos","acta"]).',
+ referencia:'Un desplegable con los nodos que ya existen en el árbol (por ejemplo, la tarea de la que depende esta). Guarda el identificador del nodo elegido y se muestra como enlace.'
+};
+const MENU_TIPOS={
+ arbol:{label:'Árbol de proyectos',desc:'Abre la vista principal: el árbol con todos los proyectos y todo lo que contienen. No necesita destino.'},
+ lista:{label:'Listado de un tipo',desc:'Muestra en una tabla todos los nodos de un tipo (por ejemplo, todas las tareas) sin importar en qué nivel del árbol estén. El destino es uno de los tipos definidos por ustedes en "Tipos de nodo".'},
+ reportes:{label:'Lista de reportes',desc:'Abre la pantalla con todos los reportes definidos. No necesita destino.'},
+ reporte:{label:'Un reporte',desc:'Ejecuta directamente un reporte concreto. El destino es uno de los reportes definidos por ustedes en "Reportes".'},
+ config:{label:'Pantalla de configuración',desc:'Abre una de las pantallas de diseño del sistema (Pantallas, Tipos de nodo, Listas de opciones, Menú, JSON, Ayuda). Estas pantallas vienen fijas con el sistema; desde el menú solo se decide dónde aparecen y con qué nombre.'},
+ url:{label:'Enlace externo',desc:'Abre una dirección web en otra pestaña, por ejemplo la intranet del cliente o un tablero externo. El destino es la URL completa (https://…).'},
+ grupo:{label:'Título de grupo',desc:'No es un enlace. Es un rótulo que separa visualmente un bloque de opciones del menú, como "Configuración".'}
+};
+const CONFIG_PANTALLAS={formularios:'Pantallas (formularios)',tipos:'Tipos de nodo',catalogos:'Listas de opciones',menu:'Menú',json:'JSON del sistema',ayuda:'Ayuda y glosario'};
+const listaDesc=(dic,fmt)=>Object.entries(dic).map(([k,v])=>'• '+fmt(k,v)).join('\n');
+
+/* ---- Textos de ayuda (tooltips) ---- */
+const TIP={
+ fijo:'Esta lista de valores es FIJA: viene programada en el sistema y no se define desde ninguna pantalla. Lo que ustedes definen es a qué apunta cada uno.',
+ tipoNodo:'Tipo de nodo: la "clase" de cada elemento del árbol (Proyecto, Etapa, Tarea u otros que ustedes creen). El tipo decide qué pantalla se usa para editarlo, qué puede contener y qué columnas muestra en los listados. Se definen en Configuración › Tipos de nodo.',
+ codigo:'Código jerárquico que el sistema asigna solo al crear el nodo: PRJ-001 para un proyecto raíz, PRJ-001.2 para su segundo interno, PRJ-001.2.1 para el primer interno de ese, y así sucesivamente. Es una de las preguntas abiertas: puede cambiarse por un correlativo por tipo o por un código manual.',
+ creado:'Fecha en que se creó el nodo. La pone el sistema; no se edita.',
+ tabDatos:'La ficha del nodo. Los campos que ves aquí NO están programados: salen de la pantalla (formulario) asignada a este tipo de nodo. Con el botón ámbar "Diseñar esta pantalla" puedes agregar, quitar o cambiar campos.',
+ tabHijos:'Los nodos que cuelgan de este ("internos"). Qué tipos pueden ir aquí se define en Tipos de nodo › "Puede contener". Un proyecto puede contener proyectos, y una etapa otras etapas, sin límite de profundidad.',
+ tabArchivos:'Constancias adjuntas a este nodo: documentos y correos entregados por las partes. En la demo no se sube el archivo real; solo se registra su nombre, tamaño y datos.',
+ tabHistorial:'Registro automático de cada cambio hecho en la ficha: qué campo cambió, valor anterior y nuevo, y cuándo. Se genera al guardar comparando la ficha vieja con la nueva. No se edita ni se borra.',
+ renombrar:'Cambiar el nombre del nodo. El cambio queda registrado en el historial.',
+ eliminar:'Elimina este nodo y TODO lo que contiene (sus internos y sus archivos). En el sistema real esto debería ir a una papelera; en la demo es definitivo.',
+ btnDisenar:'Abre la definición de la pantalla que estás viendo, en "modo diseño". Ahí puedes agregar campos, cambiar su tipo, reordenarlos, ocultarlos o ponerles condiciones. Al volver, la pantalla ya está cambiada. Es la forma de construir el sistema frente al cliente.',
+ arbolNuevo:'Crea un proyecto en el nivel raíz (sin padre). Para crear algo dentro de un proyecto, entra al proyecto y usa la pestaña "Internos".',
+ arbolTipos:'Abre Tipos de nodo, donde se define qué clases de elementos existen (Proyecto, Etapa, Tarea…) y cuál puede contener a cuál.',
+ chipEstado:'Valor del campo "estado" del nodo, mostrado con el color definido en la Lista de opciones "Estados". Si a la pantalla del tipo le quitas el campo estado, este chip deja de mostrarse.',
+ internos:'Cantidad de nodos que cuelgan directamente de este.',
+ ubicacion:'Ruta de ancestros del nodo: en qué proyecto y en qué etapa está. Se calcula desde el árbol; en la base real se guarda como "path" (ruta materializada) para poder consultar subárboles completos en una sola consulta.',
+ /* diseñador de pantallas */
+ dsgCampos:'La lista de campos de esta pantalla, en el orden en que se mostrarán. Cada fila es un campo. Usa las flechas para reordenar. Todo cambio se guarda al instante en la definición y se ve en la vista previa de la derecha.',
+ dsgEtiqueta:'Texto que verá el usuario junto al campo. Puedes cambiarlo cuando quieras: no afecta a los datos ya guardados, porque los datos se guardan bajo la clave interna, no bajo la etiqueta.',
+ dsgKey:'Clave interna del campo (se deriva sola de la etiqueta al crearlo y luego NO cambia). Es el nombre con el que el valor se guarda dentro del objeto "datos" de cada nodo, y el nombre que usan las condiciones y los reportes. Por eso puedes renombrar la etiqueta sin perder nada.',
+ dsgTipo:'Tipo de control del campo. '+'Esta lista es FIJA del sistema (viene programada). Tipos disponibles:\n'+listaDesc(TIPOS_CAMPO,(k,v)=>v+': '+TIPOS_CAMPO_DESC[k]),
+ dsgAncho:'Cuánto ocupa el campo en la grilla de la ficha: media fila (dos campos por línea) o la fila completa (para textos largos o listas de casillas).',
+ dsgReq:'Si está marcado, no se puede guardar la ficha con este campo vacío. Si el campo está oculto por una condición, no se exige.',
+ dsgVisible:'Desmarcado = el campo se quita de la pantalla SIN borrar los datos que ya tenga cada nodo. Si lo vuelves a marcar, los valores reaparecen. Es la forma segura de "sacar" un campo.',
+ dsgOrigen:'De dónde salen las opciones de este campo.\n• "Lista: …" usa una Lista de opciones compartida (Configuración › Listas de opciones). Varias pantallas pueden usar la misma lista y se mantiene en un solo lugar, con colores.\n• "Propias de este campo": escribes las opciones aquí mismo, separadas por punto y coma. Sirve para opciones que no se repiten en otra pantalla.',
+ dsgInline:'Escribe las opciones separadas por punto y coma. Ejemplo: Informe; Planos; Acta. El valor interno de cada una se deriva solo (informe, planos, acta).',
+ dsgRefTipo:'Limita el desplegable a los nodos de un tipo. Ejemplo: "Depende de" solo debería listar tareas.',
+ dsgCond:'Condición de visibilidad. El campo se muestra únicamente cuando otro campo de la misma pantalla tiene cierto valor. Ejemplo: "N° de contrato" solo si "Tiene contrato firmado" = true. Para listas se compara con el valor interno de la opción (en_curso, alta…); para casillas con true o false. Se evalúa en vivo mientras el usuario escribe.',
+ dsgCondValor:'Valor que debe tener el otro campo para que este se muestre. Usa el valor interno: true / false para casillas, o el valor interno de la opción (por ejemplo en_curso) para listas.',
+ dsgAyuda:'Texto pequeño que aparece debajo del campo para orientar al usuario. Opcional.',
+ dsgQuitar:'Quita el campo de la definición de la pantalla. Los valores ya guardados en los nodos se conservan dentro de "datos" aunque ya no se muestren. Si prefieres una salida reversible, desmarca "Visible".',
+ dsgMover:'Sube o baja el campo. El orden de esta lista es el orden en la pantalla.',
+ dsgPreview:'Cómo se verá la ficha con la definición actual, usando los datos reales de un nodo de ejemplo. Cambia algo a la izquierda y mira el efecto aquí. No guarda datos.',
+ dsgNombre:'Nombre de la pantalla, para reconocerla en la lista de Pantallas y al asignarla a un tipo de nodo.',
+ dsgUsadaPor:'Tipos de nodo que usan esta pantalla como ficha. Una pantalla puede ser compartida por varios tipos.',
+ dsgAgregar:'Agrega un campo nuevo al final. Solo pide la etiqueta; el resto (tipo texto, media fila, visible) queda con valores por defecto que puedes cambiar en la fila.',
+ pantNueva:'Crea una pantalla vacía. Luego hay que asignarla a un tipo de nodo (Tipos de nodo › Pantalla que usa) para que alguien la vea.',
+ /* tipos */
+ tIcono:'Un carácter o emoji que representa el tipo en el árbol y en los listados. Solo visual.',
+ tNombre:'Nombre del tipo tal como se muestra al usuario (en singular). Se puede cambiar libremente.',
+ tId:'Identificador interno del tipo. Se deriva del nombre al crearlo y luego no cambia; es lo que cada nodo guarda en su campo "tipo".',
+ tForm:'La pantalla (formulario) que se abre al editar un nodo de este tipo. Todos los nodos del tipo comparten la misma ficha. Puedes elegir una existente o diseñarla.',
+ tHijos:'Qué tipos de nodo pueden crearse DENTRO de un nodo de este tipo. Marcar el propio tipo permite anidarlo en sí mismo (proyecto dentro de proyecto). Sin marcas = no admite internos.',
+ tCols:'Qué campos de la ficha aparecen como columnas en los listados de este tipo (pestaña "Internos" del padre y listado "Todas las …" del menú). Código y nombre van siempre.',
+ tQuitar:'Elimina el tipo. Solo se permite si no existe ningún nodo de este tipo.',
+ tNuevo:'Crea un tipo nuevo (por ejemplo Hito, Contrato, Entregable) con una pantalla vacía propia. Después define quién puede contenerlo y diseña su ficha.',
+ /* catálogos */
+ cNombre:'Nombre de la lista, para reconocerla al asignarla a un campo.',
+ cEtiqueta:'Texto que ve el usuario. Se puede cambiar sin afectar los datos guardados.',
+ cValor:'Valor interno de la opción: es lo que realmente se guarda en el nodo. Se deriva de la etiqueta al crear la opción y luego no cambia. Es el valor que se usa en condiciones y filtros.',
+ cColor:'Color del chip con que se muestra esta opción en árbol, listados y reportes.',
+ cUsada:'Campos (pantalla › campo) que usan esta lista. Cambiar una opción aquí afecta a todos ellos.',
+ cNueva:'Crea una lista de opciones vacía. Luego asígnala a un campo de tipo lista, botones de opción o selección múltiple desde el diseñador de pantalla.',
+ cQuitarOp:'Quita la opción de la lista. Los nodos que ya la tengan conservan el valor y lo muestran en crudo hasta que alguien lo corrija.',
+ /* menú */
+ mIcono:'Carácter o emoji que se muestra a la izquierda del texto en el menú. Solo visual.',
+ mLabel:'Texto de la opción tal como aparece en el menú lateral.',
+ mTipo:'Qué clase de destino abre esta opción. '+'Esta lista es FIJA del sistema: son las cosas que la aplicación sabe abrir. Lo que ustedes definen es cuál en concreto (columna Destino).\n'+listaDesc(MENU_TIPOS,(k,v)=>v.label+': '+v.desc),
+ mDestino:'A cuál elemento concreto apunta la opción. Las alternativas dependen del tipo de opción: los tipos de nodo que ustedes definieron, los reportes que ustedes crearon, o las pantallas de configuración fijas del sistema.',
+ mSub:'Muestra la opción con sangría, como subopción de la anterior. Es solo visual: sirve para agrupar, por ejemplo, un reporte debajo de "Reportes".',
+ mVisible:'Desmarcado = la opción se oculta del menú sin borrarla. Útil para preparar opciones que aún no se quieren mostrar.',
+ mMover:'Cambia la posición de la opción en el menú. El efecto se ve de inmediato a la izquierda.',
+ mAgregar:'Agrega una opción al final del menú, apuntando al árbol. Cámbiale texto, tipo y destino en la fila.',
+ mQuitar:'Quita la opción del menú. No borra lo que apuntaba (el reporte o la pantalla siguen existiendo).',
+ /* reportes */
+ rNombre:'Nombre con que se muestra el reporte en la lista y en el menú.',
+ rTipo:'Sobre qué tipo de nodo corre el reporte. Al cambiarlo, las columnas, filtros y agrupaciones disponibles cambian porque salen de la ficha de ese tipo.',
+ rAlcance:'Restringe el reporte a un subárbol: solo los nodos que están dentro del nodo elegido, a cualquier profundidad. "Todo el sistema" toma todos los nodos del tipo. En MongoDB se resuelve con el campo path.',
+ rAgrupar:'Campo por el que se agrupan las filas. Cada grupo muestra su conteo y la suma de las columnas numéricas incluidas. Solo se ofrecen campos con valores discretos (listas, opciones, casillas, texto).',
+ rFiltroCampo:'Campo de la ficha por el que se filtra. Solo se muestran los nodos donde el campo tenga exactamente el valor indicado.',
+ rFiltroValor:'Valor que debe tener el campo. Si el campo es una lista, se elige entre sus opciones; si es texto o número, se escribe tal cual.',
+ rCols:'Columnas de la tabla. Código, Nombre y Ubicación son fijas del sistema; el resto son los campos de la ficha del tipo elegido. Si agregas un campo a la ficha, aparece aquí automáticamente.',
+ rDef:'El reporte completo, tal como se guarda: es un documento JSON, no código. Con esto cualquier reporte se puede copiar, versionar o llevar a otro ambiente.',
+ rPipe:'Traducción automática de la definición a una consulta de agregación de MongoDB. $match aplica tipo, alcance y filtro; $project elige columnas; $group agrupa y suma. Es la evidencia de que los reportes se generan a partir del JSON y no se programan uno por uno.',
+ rNuevo:'Crea un reporte vacío sobre el primer tipo de nodo y abre su diseño.',
+ rCopiar:'Copia la tabla al portapapeles para pegarla en Excel o en un correo.',
+ rDisenar:'Abre el panel de definición del reporte: tipo, alcance, columnas, filtro y agrupación.',
+ rEliminar:'Elimina el reporte y cualquier opción de menú que apuntara a él.',
+ /* archivos */
+ aArchivo:'Selecciona el archivo. En la demo no se sube a ningún servidor: solo se leen su nombre y tamaño para registrar la constancia. Si el archivo termina en .eml o .msg, se marca como email automáticamente.',
+ aNombre:'Nombre con el que se registra la constancia. Se rellena solo al elegir el archivo, pero puedes cambiarlo.',
+ aClase:'Documento o Email. Es una lista FIJA del sistema. Para un email se piden además remitente, destinatario y asunto, para poder buscarlo después.',
+ aOrigen:'Quién entregó el archivo: cliente, contratista, supervisión… Texto libre por ahora; podría convertirse en lista de opciones.',
+ aFecha:'Fecha en que se recibió o registró la constancia.',
+ aEmail:'Datos del correo, para dejar constancia de quién lo envió y sobre qué. En el sistema real podrían extraerse automáticamente del archivo .eml o .msg.',
+ aQuitar:'Quita la constancia del nodo. En el sistema real las constancias no deberían borrarse físicamente.',
+ /* json */
+ jMeta:'La definición del sistema: tipos de nodo, pantallas, listas de opciones, menú y reportes. Es todo lo que ustedes diseñan. Se puede copiar y llevar a otro ambiente.',
+ jDatos:'Los documentos de datos: nodos del árbol (con su objeto "datos" moldeado por la definición), archivos e historial.',
+ jImportar:'Pega una definición copiada de otro ambiente para reemplazar la actual. Así se lleva lo diseñado con el cliente en la demo al sistema real.',
+ diseñoBar:'Modo diseño: aquí no se cargan datos, se define cómo funciona el sistema. Cada cambio se guarda de inmediato en el JSON de definición y se refleja en las pantallas de uso.'
+};
+const q=t=>`<span class="q" tabindex="0" data-tip="${esc(t)}">?</span>`;
 
 function seed(){return{
  meta:{
@@ -218,7 +346,8 @@ function seed(){return{
    {id:'m7',label:'Tipos de nodo',icono:'⋔',tipo:'config',target:'tipos',visible:true},
    {id:'m8',label:'Listas de opciones',icono:'☰',tipo:'config',target:'catalogos',visible:true},
    {id:'m9',label:'Menú',icono:'⇅',tipo:'config',target:'menu',visible:true},
-   {id:'m10',label:'JSON del sistema',icono:'{}',tipo:'config',target:'json',visible:true}
+   {id:'m10',label:'JSON del sistema',icono:'{}',tipo:'config',target:'json',visible:true},
+   {id:'m11',label:'Ayuda y glosario',icono:'?',tipo:'config',target:'ayuda',visible:true}
   ],
   reportes:[
    {id:'r1',nombre:'Tareas por estado',tipo:'tarea',alcance:'',campos:['nombre','ruta','prioridad','responsable','fecha_limite','horas'],filtro:{campo:'',valor:''},agrupar:'estado'},
@@ -256,6 +385,16 @@ function load(){try{const r=localStorage.getItem(LS);S=r?JSON.parse(r):seed()}ca
 function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
 
+/* ============ tooltips ============ */
+const tipEl=document.createElement('div');tipEl.id='tip';document.body.appendChild(tipEl);
+function showTip(el){const t=el.getAttribute('data-tip');if(!t)return;tipEl.textContent=t;tipEl.style.display='block';const w=Math.min(380,window.innerWidth-24);tipEl.style.width=w+'px';const r=el.getBoundingClientRect();let x=r.left,y=r.bottom+8;if(x+w>window.innerWidth-12)x=window.innerWidth-12-w;if(x<12)x=12;const h=tipEl.offsetHeight;if(y+h>window.innerHeight-8)y=Math.max(8,r.top-h-8);tipEl.style.left=x+'px';tipEl.style.top=y+'px'}
+function hideTip(){tipEl.style.display='none'}
+document.addEventListener('mouseover',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');if(el)showTip(el);else hideTip()});
+document.addEventListener('focusin',e=>{const el=e.target.closest&&e.target.closest('.q[data-tip]');if(el)showTip(el)});
+document.addEventListener('focusout',hideTip);
+document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('.q');if(el){showTip(el);e.stopPropagation()}else hideTip()});
+window.addEventListener('scroll',hideTip,true);
+
 /* ============ acceso al modelo ============ */
 const tipo=id=>S.meta.tipos.find(t=>t.id===id);
 const form=id=>S.meta.formularios[id];
@@ -286,9 +425,9 @@ function mostrarValor(f,v){
 /* ============ navegación ============ */
 function route(){
  const h=location.hash.replace(/^#\/?/,'');const [a,b,c]=h.split('/');
- const V={ '':vArbol, arbol:vArbol, nodo:()=>vNodo(b,c||'datos'), lista:()=>vLista(b), form:()=>vForm(b), formularios:vFormularios, tipos:vTipos, catalogos:()=>vCatalogos(b), menu:vMenu, reportes:vReportes, reporte:()=>vReporte(b,c), json:()=>vJson(b) };
+ const V={ '':vArbol, arbol:vArbol, nodo:()=>vNodo(b,c||'datos'), lista:()=>vLista(b), form:()=>vForm(b), formularios:vFormularios, tipos:vTipos, catalogos:()=>vCatalogos(b), menu:vMenu, reportes:vReportes, reporte:()=>vReporte(b,c), json:()=>vJson(b), ayuda:vAyuda };
  (V[a]||vArbol)();
- renderNav();
+ renderNav();hideTip();
  window.scrollTo(0,0);
 }
 function setTop(crumbs,btn){document.getElementById('crumbs').innerHTML=crumbs;document.getElementById('topbtn').innerHTML=btn||''}
@@ -297,22 +436,23 @@ function hrefMenu(m){switch(m.tipo){case 'arbol':return '#/arbol';case 'lista':r
 function renderNav(){
  const cur=location.hash||'#/arbol';
  document.getElementById('nav').innerHTML=S.meta.menu.filter(m=>m.visible!==false).map(m=>{
-  if(m.tipo==='grupo')return `<div class="grp">${esc(m.label)}</div>`;
+  if(m.tipo==='grupo')return `<div class="grp" data-tip="${esc('Título de grupo del menú: no es un enlace, solo separa un bloque de opciones. Se define en Configuración › Menú.')}">${esc(m.label)}</div>`;
   const h=hrefMenu(m);const on=cur===h||(h==='#/arbol'&&(cur.startsWith('#/nodo')||cur==='#/'));
-  return `<a href="${esc(h)}" class="${on?'on':''} ${m.sub?'sub':''}" ${m.tipo==='url'?'target="_blank" rel="noopener"':''}><span class="ic">${esc(m.icono||'')}</span>${esc(m.label)}</a>`;
+  const mt=MENU_TIPOS[m.tipo]||{label:m.tipo,desc:''};
+  return `<a href="${esc(h)}" class="${on?'on':''} ${m.sub?'sub':''}" ${m.tipo==='url'?'target="_blank" rel="noopener"':''} data-tip="${esc(`Opción de menú "${m.label}" · tipo: ${mt.label}. ${mt.desc}\n\nEsta opción no está programada: se define en Configuración › Menú, donde puedes cambiar su texto, orden, destino o quitarla.`)}"><span class="ic">${esc(m.icono||'')}</span>${esc(m.label)}</a>`;
  }).join('');
 }
-const designBtn=(href,txt)=>`<a class="btn design" href="${href}">⚙ ${txt||'Diseñar esta pantalla'}</a>`;
-const designBar=txt=>`<div class="design-bar"><b>Modo diseño</b><span>${txt} Los cambios se aplican de inmediato y quedan escritos en el JSON de definición.</span></div>`;
+const designBtn=(href,txt,tip)=>`<a class="btn design" href="${href}" data-tip="${esc(tip||TIP.btnDisenar)}">⚙ ${txt||'Diseñar esta pantalla'}</a>`;
+const designBar=txt=>`<div class="design-bar"><b data-tip="${esc(TIP.diseñoBar)}">Modo diseño</b><span>${txt} Los cambios se aplican de inmediato y quedan escritos en el JSON de definición. Pasa el mouse por cualquier <span class="q" style="margin:0">?</span> para saber qué es cada cosa.</span></div>`;
 
 /* ============ vista: árbol ============ */
 function vArbol(){
- setTop(`<span class="cur">Proyectos</span>`,designBtn('#/tipos','Diseñar tipos y jerarquía'));
+ setTop(`<span class="cur">Proyectos</span>`,designBtn('#/tipos','Diseñar tipos y jerarquía',TIP.arbolTipos));
  const rec=pid=>{const hs=hijos(pid);if(!hs.length)return '';return '<ul>'+hs.map(n=>{const t=tipo(n.tipo);const fe=campoDe(n.tipo,'estado');const c=hijos(n.id).length;
-  return `<li><div class="row"><span class="tg">${c?'▾':''}</span><span class="ic">${esc(t?.icono||'')}</span><a href="#/nodo/${n.id}">${esc(n.nombre)}</a><span class="badge">${esc(t?.nombre||n.tipo)}</span><span class="code">${esc(n.codigo)}</span>${fe&&n.datos.estado?chip(fe,n.datos.estado):''}${c?`<span class="cnt">${c} interno${c>1?'s':''}</span>`:''}</div>${rec(n.id)}</li>`}).join('')+'</ul>'};
+  return `<li><div class="row"><span class="tg">${c?'▾':''}</span><span class="ic">${esc(t?.icono||'')}</span><a href="#/nodo/${n.id}">${esc(n.nombre)}</a><span class="badge" data-tip="${esc(TIP.tipoNodo)}">${esc(t?.nombre||n.tipo)}</span><span class="code" data-tip="${esc(TIP.codigo)}">${esc(n.codigo)}</span>${fe&&n.datos.estado?`<span data-tip="${esc(TIP.chipEstado)}">${chip(fe,n.datos.estado)}</span>`:''}${c?`<span class="cnt" data-tip="${esc(TIP.internos)}">${c} interno${c>1?'s':''}</span>`:''}</div>${rec(n.id)}</li>`}).join('')+'</ul>'};
  const raiz=S.meta.tipos.filter(t=>t.id==='proyecto'||!S.meta.tipos.some(o=>o.hijos.includes(t.id)));
- view(`<div class="page-head"><div><h1>Proyectos</h1><div class="meta">Un proyecto puede contener proyectos, etapas o tareas, sin límite de profundidad. La jerarquía permitida se define en <a href="#/tipos">Tipos de nodo</a>.</div></div>
-  <div>${raiz.map(t=>`<button class="btn pri" onclick="A.nuevoNodo(null,'${t.id}')">+ Nuevo ${esc(t.nombre.toLowerCase())}</button>`).join(' ')}</div></div>
+ view(`<div class="page-head"><div><h1>Proyectos ${q('Vista principal del sistema: el árbol completo. Cada fila es un nodo; su tipo (Proyecto, Etapa, Tarea…) aparece en la etiqueta azul y su código jerárquico en gris. Haz clic en el nombre para abrir su ficha.')}</h1><div class="meta">Un proyecto puede contener proyectos, etapas o tareas, sin límite de profundidad. La jerarquía permitida se define en <a href="#/tipos">Tipos de nodo</a>.</div></div>
+  <div>${raiz.map(t=>`<button class="btn pri" onclick="A.nuevoNodo(null,'${t.id}')" data-tip="${esc(TIP.arbolNuevo)}">+ Nuevo ${esc(t.nombre.toLowerCase())}</button>`).join(' ')}</div></div>
   <div class="card tree">${rec(null)||'<div class="empty">Aún no hay proyectos.</div>'}</div>`);
 }
 
@@ -323,35 +463,35 @@ function vNodo(id,tab){
  const crumbs=`<a href="#/arbol">Proyectos</a>`+ancestros(id).map(a=>`<span class="sep">›</span><a href="#/nodo/${a.id}">${esc(a.nombre)}</a>`).join('')+`<span class="sep">›</span><span class="cur">${esc(n.nombre)}</span>`;
  setTop(crumbs,designBtn('#/form/'+t.formId));
  const nh=hijos(id).length,na=archivosDe(id).length,nhi=S.datos.historial.filter(h=>h.nodoId===id).length;
- const tabs=[['datos','Datos',''],['hijos','Internos',nh],['archivos','Archivos',na],['historial','Historial',nhi]].map(([k,l,c])=>`<a href="#/nodo/${id}/${k}" class="${tab===k?'on':''}">${l}${c!==''?`<span class="n">${c}</span>`:''}</a>`).join('');
+ const tabs=[['datos','Datos','',TIP.tabDatos],['hijos','Internos',nh,TIP.tabHijos],['archivos','Archivos',na,TIP.tabArchivos],['historial','Historial',nhi,TIP.tabHistorial]].map(([k,l,c,tp])=>`<a href="#/nodo/${id}/${k}" class="${tab===k?'on':''}" data-tip="${esc(tp)}">${l}${c!==''?`<span class="n">${c}</span>`:''}</a>`).join('');
  let body='';
  if(tab==='datos'){
-  body=`<div class="card"><h2>${esc(f.nombre)}</h2>${renderForm(f,n.datos)}<div class="actions"><button class="btn" onclick="location.hash='#/arbol'">Cancelar</button><button class="btn pri" onclick="A.guardarNodo('${id}')">Guardar</button></div></div>`;
+  body=`<div class="card"><h2>${esc(f.nombre)} ${q('Nombre de la pantalla (formulario) que define esta ficha. Los campos de abajo salen de esa definición, no del código. Se cambia con el botón ámbar "Diseñar esta pantalla".')}</h2>${renderForm(f,n.datos)}<div class="actions"><button class="btn" onclick="location.hash='#/arbol'">Cancelar</button><button class="btn pri" onclick="A.guardarNodo('${id}')" data-tip="Guarda la ficha. Valida los campos requeridos, compara valor por valor con lo anterior y registra cada diferencia en la pestaña Historial.">Guardar</button></div></div>`;
  }else if(tab==='hijos'){
   const secs=t.hijos.map(ht=>{const th=tipo(ht);if(!th)return '';const hs=hijos(id).filter(x=>x.tipo===ht);const cols=(th.columnas||[]).map(k=>campoDe(ht,k)).filter(Boolean);
-   return `<div class="card"><div class="page-head" style="margin-bottom:10px"><h2>${esc(th.nombre)}s internos</h2><button class="btn sm pri" onclick="A.nuevoNodo('${id}','${ht}')">+ Nueva ${esc(th.nombre.toLowerCase())}</button></div>
+   return `<div class="card"><div class="page-head" style="margin-bottom:10px"><h2>${esc(th.nombre)}s internos ${q(`Nodos de tipo "${th.nombre}" que cuelgan directamente de este. Esta sección existe porque en Tipos de nodo se marcó que "${t.nombre}" puede contener "${th.nombre}". Las columnas son las elegidas en Tipos de nodo › Columnas en los listados.`)}</h2><button class="btn sm pri" onclick="A.nuevoNodo('${id}','${ht}')" data-tip="Crea un nodo de tipo ${esc(th.nombre)} dentro de este. Recibe un código jerárquico automático y se abre su ficha vacía.">+ Nueva ${esc(th.nombre.toLowerCase())}</button></div>
    ${hs.length?`<div class="tbl-wrap"><table><thead><tr><th>Código</th><th>Nombre</th>${cols.map(c=>`<th class="${c.tipo==='numero'?'num':''}">${esc(c.label)}</th>`).join('')}<th>Internos</th></tr></thead><tbody>${hs.map(h=>`<tr><td class="code">${esc(h.codigo)}</td><td><a href="#/nodo/${h.id}">${esc(h.nombre)}</a></td>${cols.map(c=>`<td class="${c.tipo==='numero'?'num':''}">${mostrarValor(c,h.datos[c.key])}</td>`).join('')}<td class="num">${hijos(h.id).length||''}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin registros.</div>'}
    <div class="note" style="margin-top:8px">Las columnas de este listado se definen en <a href="#/tipos">Tipos de nodo › ${esc(th.nombre)}</a>.</div></div>`}).join('');
   body=`<div class="stack">${secs||'<div class="card empty">Este tipo de nodo no admite internos. Puedes cambiarlo en <a href="#/tipos">Tipos de nodo</a>.</div>'}</div>`;
  }else if(tab==='archivos'){
   const as=archivosDe(id);
-  body=`<div class="stack"><div class="card"><h2>Constancias adjuntas</h2>${as.length?`<div class="tbl-wrap"><table><thead><tr><th>Archivo</th><th>Clase</th><th>Detalle</th><th>Origen</th><th>Fecha</th><th class="num">Tamaño</th><th></th></tr></thead><tbody>${as.map(a=>`<tr><td><a href="#" onclick="return false">${esc(a.nombre)}</a></td><td>${a.clase==='email'?'<span class="badge">Email</span>':'<span class="badge">Documento</span>'}</td><td class="note">${a.email?`${esc(a.email.de)} → ${esc(a.email.para)}<br>${esc(a.email.asunto)}`:''}</td><td>${esc(a.origen||'')}</td><td>${esc(a.fecha)}</td><td class="num">${fmtBytes(a.tamano)}</td><td><button class="btn sm danger" onclick="A.borrarArchivo('${a.id}')">Quitar</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin archivos registrados.</div>'}</div>
-  <div class="card"><h2>Registrar constancia</h2><div class="form-grid">
-   <div class="fld full"><label for="up_file">Archivo</label><input type="file" id="up_file" onchange="A.upName(this)"><div class="help">En el demo no se sube nada: solo se registra nombre y tamaño.</div></div>
-   <div class="fld half"><label for="up_nombre">Nombre</label><input type="text" id="up_nombre"></div>
-   <div class="fld half"><label for="up_clase">Clase</label><select id="up_clase" onchange="A.upClase(this.value)"><option value="documento">Documento</option><option value="email">Email</option></select></div>
-   <div class="fld half"><label for="up_origen">Entregado por</label><input type="text" id="up_origen" placeholder="Cliente, contratista, supervisión…"></div>
-   <div class="fld half"><label for="up_fecha">Fecha de recepción</label><input type="date" id="up_fecha" value="${hoy()}"></div>
-   <div class="fld half em hidden"><label for="up_de">De</label><input type="text" id="up_de"></div>
-   <div class="fld half em hidden"><label for="up_para">Para</label><input type="text" id="up_para"></div>
-   <div class="fld full em hidden"><label for="up_asunto">Asunto</label><input type="text" id="up_asunto"></div>
-  </div><div class="actions"><button class="btn pri" onclick="A.registrarArchivo('${id}')">Guardar constancia</button></div></div></div>`;
+  body=`<div class="stack"><div class="card"><h2>Constancias adjuntas ${q(TIP.tabArchivos)}</h2>${as.length?`<div class="tbl-wrap"><table><thead><tr><th>Archivo</th><th>Clase ${q(TIP.aClase)}</th><th>Detalle ${q('Para emails: remitente → destinatario y asunto. Para documentos queda vacío.')}</th><th>Origen ${q(TIP.aOrigen)}</th><th>Fecha ${q(TIP.aFecha)}</th><th class="num">Tamaño</th><th></th></tr></thead><tbody>${as.map(a=>`<tr><td><a href="#" onclick="return false" data-tip="En el sistema real abriría o descargaría el archivo. En la demo no hay archivo físico.">${esc(a.nombre)}</a></td><td>${a.clase==='email'?'<span class="badge">Email</span>':'<span class="badge">Documento</span>'}</td><td class="note">${a.email?`${esc(a.email.de)} → ${esc(a.email.para)}<br>${esc(a.email.asunto)}`:''}</td><td>${esc(a.origen||'')}</td><td>${esc(a.fecha)}</td><td class="num">${fmtBytes(a.tamano)}</td><td><button class="btn sm danger" onclick="A.borrarArchivo('${a.id}')" data-tip="${esc(TIP.aQuitar)}">Quitar</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin archivos registrados.</div>'}</div>
+  <div class="card"><h2>Registrar constancia ${q('Deja constancia de un documento o correo entregado por alguna de las partes, asociado a este nodo. Estos campos son fijos del sistema (no salen de una pantalla definible), porque el manejo de archivos es una función base.')}</h2><div class="form-grid">
+   <div class="fld full"><label for="up_file">Archivo ${q(TIP.aArchivo)}</label><input type="file" id="up_file" onchange="A.upName(this)"><div class="help">En el demo no se sube nada: solo se registra nombre y tamaño.</div></div>
+   <div class="fld half"><label for="up_nombre">Nombre ${q(TIP.aNombre)}</label><input type="text" id="up_nombre"></div>
+   <div class="fld half"><label for="up_clase">Clase ${q(TIP.aClase)}</label><select id="up_clase" onchange="A.upClase(this.value)" data-tip="${esc(TIP.aClase)}"><option value="documento">Documento</option><option value="email">Email</option></select></div>
+   <div class="fld half"><label for="up_origen">Entregado por ${q(TIP.aOrigen)}</label><input type="text" id="up_origen" placeholder="Cliente, contratista, supervisión…"></div>
+   <div class="fld half"><label for="up_fecha">Fecha de recepción ${q(TIP.aFecha)}</label><input type="date" id="up_fecha" value="${hoy()}"></div>
+   <div class="fld half em hidden"><label for="up_de">De ${q(TIP.aEmail)}</label><input type="text" id="up_de"></div>
+   <div class="fld half em hidden"><label for="up_para">Para ${q(TIP.aEmail)}</label><input type="text" id="up_para"></div>
+   <div class="fld full em hidden"><label for="up_asunto">Asunto ${q(TIP.aEmail)}</label><input type="text" id="up_asunto"></div>
+  </div><div class="actions"><button class="btn pri" onclick="A.registrarArchivo('${id}')" data-tip="Registra la constancia en este nodo y anota en el historial que se agregó un archivo.">Guardar constancia</button></div></div></div>`;
  }else{
   const hs=S.datos.historial.filter(h=>h.nodoId===id);
-  body=`<div class="card hist"><h2>Cambios registrados</h2>${hs.length?`<div class="tbl-wrap"><table><thead><tr><th>Cuándo</th><th>Campo</th><th>Antes</th><th>Después</th></tr></thead><tbody>${hs.map(h=>`<tr><td class="t">${esc(h.fecha)}</td><td>${esc(campoDe(n.tipo,h.campo)?.label||h.campo)}</td><td>${esc(h.antes)}</td><td>${esc(h.despues)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin cambios registrados.</div>'}</div>`;
+  body=`<div class="card hist"><h2>Cambios registrados ${q(TIP.tabHistorial)}</h2>${hs.length?`<div class="tbl-wrap"><table><thead><tr><th>Cuándo</th><th>Campo ${q('Etiqueta actual del campo que cambió. Se busca por su clave interna, así que aunque renombres el campo el historial sigue mostrándolo bien.')}</th><th>Antes</th><th>Después</th></tr></thead><tbody>${hs.map(h=>`<tr><td class="t">${esc(h.fecha)}</td><td>${esc(campoDe(n.tipo,h.campo)?.label||h.campo)}</td><td>${esc(h.antes)}</td><td>${esc(h.despues)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin cambios registrados.</div>'}</div>`;
  }
- view(`<div class="page-head"><div><h1>${esc(n.nombre)} <button class="btn ghost sm" onclick="A.renombrar('${id}')" title="Renombrar">✎</button></h1><div class="meta"><span class="badge">${esc(t.nombre)}</span> <span class="code">${esc(n.codigo)}</span> · creado ${esc(n.creado)}</div></div>
-  <div><button class="btn danger" onclick="A.borrarNodo('${id}')">Eliminar</button></div></div><div class="tabs">${tabs}</div>${body}`);
+ view(`<div class="page-head"><div><h1>${esc(n.nombre)} <button class="btn ghost sm" onclick="A.renombrar('${id}')" data-tip="${esc(TIP.renombrar)}">✎</button></h1><div class="meta"><span class="badge" data-tip="${esc(TIP.tipoNodo)}">${esc(t.nombre)}</span> <span class="code" data-tip="${esc(TIP.codigo)}">${esc(n.codigo)}</span> · <span data-tip="${esc(TIP.creado)}">creado ${esc(n.creado)}</span></div></div>
+  <div><button class="btn danger" onclick="A.borrarNodo('${id}')" data-tip="${esc(TIP.eliminar)}">Eliminar</button></div></div><div class="tabs">${tabs}</div>${body}`);
  if(tab==='datos')aplicarCondiciones(f);
 }
 
@@ -371,7 +511,8 @@ function renderForm(f,data,pre='c_'){
    case 'referencia':{const ns=S.datos.nodos.filter(n=>!c.refTipo||n.tipo===c.refTipo);ctl=`<select ${at}><option value="">— ninguno —</option>${ns.map(n=>`<option value="${n.id}" ${n.id===v?'selected':''}>${esc(n.codigo)} · ${esc(n.nombre)}</option>`).join('')}</select>`;break}
    default:ctl=`<input type="text" ${at} value="${esc(v)}">`;
   }
-  return `<div class="fld ${c.ancho==='full'?'full':'half'}" data-key="${c.key}"><label for="${id}">${esc(c.label)}${c.requerido?' <span class="req">*</span>':''}</label>${ctl}${c.ayuda?`<div class="help">${esc(c.ayuda)}</div>`:''}</div>`;
+  const tipCampo=`Campo "${c.label}" · tipo: ${TIPOS_CAMPO[c.tipo]||c.tipo} · clave interna: ${c.key}${c.requerido?' · requerido':''}${c.visibleSi?.campo?` · se muestra solo si ${c.visibleSi.campo} = ${c.visibleSi.valor}`:''}.\n${TIPOS_CAMPO_DESC[c.tipo]||''}\n\nEste campo no está programado: está definido en la pantalla "${f.nombre}". Se agrega, cambia o quita con el botón ámbar "Diseñar esta pantalla".${c.ayuda?'\n\nAyuda del campo: '+c.ayuda:''}`;
+  return `<div class="fld ${c.ancho==='full'?'full':'half'}" data-key="${c.key}"><label for="${id}" data-tip="${esc(tipCampo)}">${esc(c.label)}${c.requerido?' <span class="req" data-tip="Campo requerido: no se puede guardar la ficha si está vacío.">*</span>':''}</label>${ctl}${c.ayuda?`<div class="help">${esc(c.ayuda)}</div>`:''}</div>`;
  }).join('')+`</div>`;
 }
 function leerForm(f){
@@ -395,35 +536,36 @@ function vLista(tid){
  const t=tipo(tid);if(!t){location.hash='#/arbol';return}
  setTop(`<span class="cur">${esc(t.nombre)}s</span>`,designBtn('#/form/'+t.formId));
  const cols=(t.columnas||[]).map(k=>campoDe(tid,k)).filter(Boolean);const ns=S.datos.nodos.filter(n=>n.tipo===tid);
- view(`<div class="page-head"><div><h1>Todas las ${esc(t.nombre.toLowerCase())}s</h1><div class="meta">${ns.length} registros en cualquier nivel del árbol.</div></div></div>
- <div class="card tbl-wrap"><table><thead><tr><th>Código</th><th>Nombre</th><th>Ubicación</th>${cols.map(c=>`<th class="${c.tipo==='numero'?'num':''}">${esc(c.label)}</th>`).join('')}</tr></thead><tbody>${ns.map(n=>`<tr><td class="code">${esc(n.codigo)}</td><td><a href="#/nodo/${n.id}">${esc(n.nombre)}</a></td><td class="note">${esc(rutaStr(n.id))}</td>${cols.map(c=>`<td class="${c.tipo==='numero'?'num':''}">${mostrarValor(c,n.datos[c.key])}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="9" class="empty">Sin registros.</td></tr>'}</tbody></table></div>`);
+ view(`<div class="page-head"><div><h1>Todas las ${esc(t.nombre.toLowerCase())}s ${q(`Listado de todos los nodos de tipo "${t.nombre}" sin importar dónde estén en el árbol. Esta pantalla existe porque una opción del menú es de tipo "Listado de un tipo" con destino "${t.nombre}". Las columnas se eligen en Tipos de nodo.`)}</h1><div class="meta">${ns.length} registros en cualquier nivel del árbol.</div></div></div>
+ <div class="card tbl-wrap"><table><thead><tr><th>Código ${q(TIP.codigo)}</th><th>Nombre</th><th>Ubicación ${q(TIP.ubicacion)}</th>${cols.map(c=>`<th class="${c.tipo==='numero'?'num':''}">${esc(c.label)}</th>`).join('')}</tr></thead><tbody>${ns.map(n=>`<tr><td class="code">${esc(n.codigo)}</td><td><a href="#/nodo/${n.id}">${esc(n.nombre)}</a></td><td class="note">${esc(rutaStr(n.id))}</td>${cols.map(c=>`<td class="${c.tipo==='numero'?'num':''}">${mostrarValor(c,n.datos[c.key])}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="9" class="empty">Sin registros.</td></tr>'}</tbody></table></div>`);
 }
 
 /* ============ diseño: formularios ============ */
 function vFormularios(){
  setTop(`<span class="cur">Pantallas</span>`);
- view(designBar('Cada pantalla es un formulario definido por sus campos. Un tipo de nodo apunta a una de estas pantallas.')+`<div class="page-head"><h1>Pantallas</h1><button class="btn pri" onclick="A.nuevoForm()">+ Nueva pantalla</button></div>
- <div class="card"><ul class="list">${Object.values(S.meta.formularios).map(f=>`<li><div><a class="item" href="#/form/${f.id}">${esc(f.nombre)}</a> <span class="code">${f.id}</span><div class="note">${f.campos.length} campos · usada por: ${S.meta.tipos.filter(t=>t.formId===f.id).map(t=>esc(t.nombre)).join(', ')||'<i>nadie</i>'}</div></div><a class="btn sm design" href="#/form/${f.id}">Diseñar</a></li>`).join('')}</ul></div>`);
+ view(designBar('Cada pantalla es un formulario definido por sus campos. Un tipo de nodo apunta a una de estas pantallas.')+`<div class="page-head"><h1>Pantallas ${q('Las fichas que el usuario llena. Cada una es una lista de campos definida por ustedes (no programada). Un tipo de nodo usa una pantalla como su ficha; varias pueden compartir la misma.')}</h1><button class="btn pri" onclick="A.nuevoForm()" data-tip="${esc(TIP.pantNueva)}">+ Nueva pantalla</button></div>
+ <div class="card"><ul class="list">${Object.values(S.meta.formularios).map(f=>`<li><div><a class="item" href="#/form/${f.id}">${esc(f.nombre)}</a> <span class="code" data-tip="Identificador interno de la pantalla. Se deriva del nombre al crearla y no cambia; es lo que el tipo de nodo guarda en su campo formId.">${f.id}</span><div class="note">${f.campos.length} campos · usada por: ${S.meta.tipos.filter(t=>t.formId===f.id).map(t=>esc(t.nombre)).join(', ')||'<i>nadie</i>'}</div></div><a class="btn sm design" href="#/form/${f.id}" data-tip="${esc(TIP.btnDisenar)}">Diseñar</a></li>`).join('')}</ul></div>`);
 }
 function vForm(fid){
  const f=form(fid);if(!f){location.hash='#/formularios';return}
  const usa=S.meta.tipos.filter(t=>t.formId===fid);const ejemplo=S.datos.nodos.find(n=>usa.some(t=>t.id===n.tipo));
  setTop(`<a href="#/formularios">Pantallas</a><span class="sep">›</span><span class="cur">${esc(f.nombre)}</span>`,ejemplo?`<a class="btn" href="#/nodo/${ejemplo.id}">← Volver a usar la pantalla</a>`:'');
  const keys=f.campos.map(c=>c.key);
- const rows=f.campos.map((c,i)=>`<div class="drow ${c.visible===false?'off':''}"><div class="mv"><button onclick="A.fMov('${fid}',${i},-1)" title="Subir">▲</button><button onclick="A.fMov('${fid}',${i},1)" title="Bajar">▼</button></div>
-  <div class="body"><div class="line"><input type="text" class="lbl" id="fl_${c.key}" value="${esc(c.label)}" oninput="A.fSet('${fid}',${i},'label',this.value)" aria-label="Etiqueta"><span class="k">${c.key}</span>
-   <select id="ft_${c.key}" onchange="A.fSet('${fid}',${i},'tipo',this.value,true)" aria-label="Tipo de campo">${Object.entries(TIPOS_CAMPO).map(([k,v])=>`<option value="${k}" ${c.tipo===k?'selected':''}>${v}</option>`).join('')}</select>
-   <select id="fw_${c.key}" onchange="A.fSet('${fid}',${i},'ancho',this.value)" aria-label="Ancho"><option value="half" ${c.ancho!=='full'?'selected':''}>Media fila</option><option value="full" ${c.ancho==='full'?'selected':''}>Fila completa</option></select>
-   <label class="cb"><input type="checkbox" id="fr_${c.key}" ${c.requerido?'checked':''} onchange="A.fSet('${fid}',${i},'requerido',this.checked)">Requerido</label>
-   <label class="cb"><input type="checkbox" id="fv_${c.key}" ${c.visible!==false?'checked':''} onchange="A.fSet('${fid}',${i},'visible',this.checked,true)">Visible</label></div>
-   ${['lista','radio','multiple'].includes(c.tipo)?`<div class="line"><span class="note">Opciones:</span><select id="fo_${c.key}" onchange="A.fOrigen('${fid}',${i},this.value)"><option value="" ${!c.catalogo?'selected':''}>Propias de este campo</option>${Object.values(S.meta.catalogos).map(k=>`<option value="${k.id}" ${c.catalogo===k.id?'selected':''}>Lista: ${esc(k.nombre)}</option>`).join('')}</select>${c.catalogo?`<a class="btn sm" href="#/catalogos/${c.catalogo}">Editar lista</a>`:`<input type="text" id="fi_${c.key}" style="flex:1;min-width:220px" value="${esc((c.opciones||[]).map(o=>o.etiqueta).join('; '))}" placeholder="Opción 1; Opción 2; Opción 3" oninput="A.fInline('${fid}',${i},this.value)">`}</div>`:''}
-   ${c.tipo==='referencia'?`<div class="line"><span class="note">Apunta a nodos de tipo:</span><select id="fx_${c.key}" onchange="A.fSet('${fid}',${i},'refTipo',this.value)"><option value="">Cualquiera</option>${S.meta.tipos.map(t=>`<option value="${t.id}" ${c.refTipo===t.id?'selected':''}>${esc(t.nombre)}</option>`).join('')}</select></div>`:''}
-   <div class="line"><span class="note">Mostrar solo si</span><select id="fc_${c.key}" onchange="A.fCond('${fid}',${i},'campo',this.value)"><option value="">(siempre)</option>${keys.filter(k=>k!==c.key).map(k=>`<option value="${k}" ${c.visibleSi?.campo===k?'selected':''}>${esc(f.campos.find(x=>x.key===k).label)}</option>`).join('')}</select>${c.visibleSi?.campo?`<span class="note">=</span><input type="text" id="fcv_${c.key}" value="${esc(c.visibleSi.valor)}" placeholder="valor (true, en_curso…)" oninput="A.fCond('${fid}',${i},'valor',this.value)">`:''}
-   <input type="text" id="fh_${c.key}" style="flex:1;min-width:160px" value="${esc(c.ayuda||'')}" placeholder="Texto de ayuda (opcional)" oninput="A.fSet('${fid}',${i},'ayuda',this.value)"></div></div>
-  <button class="btn sm danger" onclick="A.fDel('${fid}',${i})">Quitar</button></div>`).join('');
- view(designBar(`Estás definiendo la pantalla <b style="color:var(--ink);text-transform:none;letter-spacing:0">${esc(f.nombre)}</b>.`)+`<div class="page-head"><div><h1><input type="text" id="fname" value="${esc(f.nombre)}" oninput="A.fNombre('${fid}',this.value)" style="font:inherit;border:0;border-bottom:1px dashed var(--line);background:none;color:inherit;width:100%"></h1><div class="meta">Usada por: ${usa.map(t=>esc(t.nombre)).join(', ')||'ningún tipo todavía'} · ${f.campos.length} campos</div></div><button class="btn pri" onclick="A.fAdd('${fid}')">+ Agregar campo</button></div>
- <div class="cols w"><div class="card"><h3>Campos</h3>${rows||'<div class="empty">Pantalla vacía. Agrega el primer campo frente al cliente.</div>'}</div>
- <div class="card"><h3>Vista previa</h3><div class="note" style="margin-bottom:10px">${ejemplo?`Con los datos de <a href="#/nodo/${ejemplo.id}">${esc(ejemplo.nombre)}</a>`:'Sin datos de ejemplo'}</div><div id="preview">${renderForm(f,ejemplo?ejemplo.datos:{},'pv_')}</div></div></div>`);
+ const rows=f.campos.map((c,i)=>`<div class="drow ${c.visible===false?'off':''}"><div class="mv"><button onclick="A.fMov('${fid}',${i},-1)" data-tip="${esc(TIP.dsgMover)}">▲</button><button onclick="A.fMov('${fid}',${i},1)" data-tip="${esc(TIP.dsgMover)}">▼</button></div>
+  <div class="body"><div class="line"><input type="text" class="lbl" id="fl_${c.key}" value="${esc(c.label)}" oninput="A.fSet('${fid}',${i},'label',this.value)" aria-label="Etiqueta" data-tip="${esc(TIP.dsgEtiqueta)}"><span class="k" data-tip="${esc(TIP.dsgKey)}">${c.key}</span>
+   <select id="ft_${c.key}" onchange="A.fSet('${fid}',${i},'tipo',this.value,true)" aria-label="Tipo de campo" data-tip="${esc('Tipo actual: '+TIPOS_CAMPO[c.tipo]+' — '+TIPOS_CAMPO_DESC[c.tipo]+'\n\n'+TIP.dsgTipo)}">${Object.entries(TIPOS_CAMPO).map(([k,v])=>`<option value="${k}" ${c.tipo===k?'selected':''}>${v}</option>`).join('')}</select>
+   <select id="fw_${c.key}" onchange="A.fSet('${fid}',${i},'ancho',this.value)" aria-label="Ancho" data-tip="${esc(TIP.dsgAncho)}"><option value="half" ${c.ancho!=='full'?'selected':''}>Media fila</option><option value="full" ${c.ancho==='full'?'selected':''}>Fila completa</option></select>
+   <label class="cb" data-tip="${esc(TIP.dsgReq)}"><input type="checkbox" id="fr_${c.key}" ${c.requerido?'checked':''} onchange="A.fSet('${fid}',${i},'requerido',this.checked)">Requerido</label>
+   <label class="cb" data-tip="${esc(TIP.dsgVisible)}"><input type="checkbox" id="fv_${c.key}" ${c.visible!==false?'checked':''} onchange="A.fSet('${fid}',${i},'visible',this.checked,true)">Visible</label></div>
+   <div class="hint"><b>${TIPOS_CAMPO[c.tipo]}</b> · ${TIPOS_CAMPO_DESC[c.tipo]}</div>
+   ${['lista','radio','multiple'].includes(c.tipo)?`<div class="line"><span class="note">Opciones ${q(TIP.dsgOrigen)}</span><select id="fo_${c.key}" onchange="A.fOrigen('${fid}',${i},this.value)" data-tip="${esc(TIP.dsgOrigen)}"><option value="" ${!c.catalogo?'selected':''}>Propias de este campo</option>${Object.values(S.meta.catalogos).map(k=>`<option value="${k.id}" ${c.catalogo===k.id?'selected':''}>Lista: ${esc(k.nombre)}</option>`).join('')}</select>${c.catalogo?`<a class="btn sm" href="#/catalogos/${c.catalogo}" data-tip="Abre la Lista de opciones compartida que usa este campo. Los cambios que hagas allí se ven en todos los campos que la usen.">Editar lista</a>`:`<input type="text" id="fi_${c.key}" style="flex:1;min-width:220px" value="${esc((c.opciones||[]).map(o=>o.etiqueta).join('; '))}" placeholder="Opción 1; Opción 2; Opción 3" oninput="A.fInline('${fid}',${i},this.value)" data-tip="${esc(TIP.dsgInline)}">`}</div>`:''}
+   ${c.tipo==='referencia'?`<div class="line"><span class="note">Apunta a nodos de tipo ${q(TIP.dsgRefTipo)}</span><select id="fx_${c.key}" onchange="A.fSet('${fid}',${i},'refTipo',this.value)" data-tip="${esc(TIP.dsgRefTipo)}"><option value="">Cualquiera</option>${S.meta.tipos.map(t=>`<option value="${t.id}" ${c.refTipo===t.id?'selected':''}>${esc(t.nombre)}</option>`).join('')}</select></div>`:''}
+   <div class="line"><span class="note">Mostrar solo si ${q(TIP.dsgCond)}</span><select id="fc_${c.key}" onchange="A.fCond('${fid}',${i},'campo',this.value)" data-tip="${esc(TIP.dsgCond)}"><option value="">(siempre)</option>${keys.filter(k=>k!==c.key).map(k=>`<option value="${k}" ${c.visibleSi?.campo===k?'selected':''}>${esc(f.campos.find(x=>x.key===k).label)}</option>`).join('')}</select>${c.visibleSi?.campo?`<span class="note">=</span><input type="text" id="fcv_${c.key}" value="${esc(c.visibleSi.valor)}" placeholder="valor (true, en_curso…)" oninput="A.fCond('${fid}',${i},'valor',this.value)" data-tip="${esc(TIP.dsgCondValor)}">`:''}
+   <input type="text" id="fh_${c.key}" style="flex:1;min-width:160px" value="${esc(c.ayuda||'')}" placeholder="Texto de ayuda (opcional)" oninput="A.fSet('${fid}',${i},'ayuda',this.value)" data-tip="${esc(TIP.dsgAyuda)}"></div></div>
+  <button class="btn sm danger" onclick="A.fDel('${fid}',${i})" data-tip="${esc(TIP.dsgQuitar)}">Quitar</button></div>`).join('');
+ view(designBar(`Estás definiendo la pantalla <b style="color:var(--ink);text-transform:none;letter-spacing:0">${esc(f.nombre)}</b>.`)+`<div class="page-head"><div><h1 style="display:flex;align-items:center"><input type="text" id="fname" value="${esc(f.nombre)}" oninput="A.fNombre('${fid}',this.value)" style="font:inherit;border:0;border-bottom:1px dashed var(--line);background:none;color:inherit;width:100%" data-tip="${esc(TIP.dsgNombre)}">${q(TIP.dsgNombre)}</h1><div class="meta"><span data-tip="${esc(TIP.dsgUsadaPor)}">Usada por: ${usa.map(t=>esc(t.nombre)).join(', ')||'ningún tipo todavía'}</span> · ${f.campos.length} campos · <span class="code" data-tip="Identificador interno de la pantalla; no cambia.">${fid}</span></div></div><button class="btn pri" onclick="A.fAdd('${fid}')" data-tip="${esc(TIP.dsgAgregar)}">+ Agregar campo</button></div>
+ <div class="cols w"><div class="card"><h3>Campos ${q(TIP.dsgCampos)}</h3>${rows||'<div class="empty">Pantalla vacía. Agrega el primer campo frente al cliente.</div>'}</div>
+ <div class="card"><h3>Vista previa ${q(TIP.dsgPreview)}</h3><div class="note" style="margin-bottom:10px">${ejemplo?`Con los datos de <a href="#/nodo/${ejemplo.id}">${esc(ejemplo.nombre)}</a>`:'Sin datos de ejemplo'}</div><div id="preview">${renderForm(f,ejemplo?ejemplo.datos:{},'pv_')}</div></div></div>`);
  aplicarCondiciones(f);
 }
 function refreshPreview(fid){const f=form(fid);const usa=S.meta.tipos.filter(t=>t.formId===fid);const ej=S.datos.nodos.find(n=>usa.some(t=>t.id===n.tipo));const p=document.getElementById('preview');if(p){p.innerHTML=renderForm(f,ej?ej.datos:{},'pv_');aplicarCondiciones(f)}}
@@ -431,12 +573,12 @@ function refreshPreview(fid){const f=form(fid);const usa=S.meta.tipos.filter(t=>
 /* ============ diseño: tipos ============ */
 function vTipos(){
  setTop(`<span class="cur">Tipos de nodo</span>`,`<a class="btn" href="#/arbol">← Ver el árbol</a>`);
- view(designBar('Los tipos definen qué es cada nivel del árbol, qué pantalla usa y qué puede contener.')+`<div class="page-head"><h1>Tipos de nodo</h1><button class="btn pri" onclick="A.nuevoTipo()">+ Nuevo tipo</button></div><div class="stack">`+
+ view(designBar('Los tipos definen qué es cada nivel del árbol, qué pantalla usa y qué puede contener.')+`<div class="page-head"><h1>Tipos de nodo ${q(TIP.tipoNodo)}</h1><button class="btn pri" onclick="A.nuevoTipo()" data-tip="${esc(TIP.tNuevo)}">+ Nuevo tipo</button></div><div class="stack">`+
  S.meta.tipos.map((t,i)=>{const f=form(t.formId);const cnt=S.datos.nodos.filter(n=>n.tipo===t.id).length;
-  return `<div class="card"><div class="page-head" style="margin-bottom:12px"><div class="line" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><input type="text" id="ti_${t.id}" value="${esc(t.icono)}" style="width:44px;text-align:center" oninput="A.tSet(${i},'icono',this.value)" aria-label="Ícono"><input type="text" id="tn_${t.id}" value="${esc(t.nombre)}" style="font-weight:600;font-size:16px" oninput="A.tSet(${i},'nombre',this.value)" aria-label="Nombre del tipo"><span class="code">${t.id}</span><span class="note">${cnt} registros</span></div>${cnt?'':`<button class="btn sm danger" onclick="A.tDel(${i})">Quitar tipo</button>`}</div>
-  <div class="form-grid"><div class="fld half"><label for="tf_${t.id}">Pantalla que usa</label><div class="line" style="display:flex;gap:8px"><select id="tf_${t.id}" onchange="A.tSet(${i},'formId',this.value,true)">${Object.values(S.meta.formularios).map(x=>`<option value="${x.id}" ${x.id===t.formId?'selected':''}>${esc(x.nombre)}</option>`).join('')}</select><a class="btn sm design" href="#/form/${t.formId}">Diseñar</a></div></div>
-  <div class="fld half"><label>Puede contener</label><div class="opts">${S.meta.tipos.map(o=>`<label><input type="checkbox" id="th_${t.id}_${o.id}" ${t.hijos.includes(o.id)?'checked':''} onchange="A.tHijo(${i},'${o.id}',this.checked)">${esc(o.nombre)}</label>`).join('')}</div></div>
-  <div class="fld full"><label>Columnas en los listados</label><div class="opts">${(f?f.campos:[]).map(c=>`<label><input type="checkbox" id="tc_${t.id}_${c.key}" ${(t.columnas||[]).includes(c.key)?'checked':''} onchange="A.tCol(${i},'${c.key}',this.checked)">${esc(c.label)}</label>`).join('')||'<span class="note">La pantalla no tiene campos.</span>'}</div></div></div></div>`}).join('')+`</div>`);
+  return `<div class="card"><div class="page-head" style="margin-bottom:12px"><div class="line" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><input type="text" id="ti_${t.id}" value="${esc(t.icono)}" style="width:44px;text-align:center" oninput="A.tSet(${i},'icono',this.value)" aria-label="Ícono" data-tip="${esc(TIP.tIcono)}"><input type="text" id="tn_${t.id}" value="${esc(t.nombre)}" style="font-weight:600;font-size:16px" oninput="A.tSet(${i},'nombre',this.value)" aria-label="Nombre del tipo" data-tip="${esc(TIP.tNombre)}"><span class="code" data-tip="${esc(TIP.tId)}">${t.id}</span><span class="note" data-tip="Cuántos nodos de este tipo existen hoy en el árbol. Mientras haya alguno, el tipo no se puede quitar.">${cnt} registros</span></div>${cnt?'':`<button class="btn sm danger" onclick="A.tDel(${i})" data-tip="${esc(TIP.tQuitar)}">Quitar tipo</button>`}</div>
+  <div class="form-grid"><div class="fld half"><label for="tf_${t.id}">Pantalla que usa ${q(TIP.tForm)}</label><div class="line" style="display:flex;gap:8px"><select id="tf_${t.id}" onchange="A.tSet(${i},'formId',this.value,true)" data-tip="${esc(TIP.tForm)}">${Object.values(S.meta.formularios).map(x=>`<option value="${x.id}" ${x.id===t.formId?'selected':''}>${esc(x.nombre)}</option>`).join('')}</select><a class="btn sm design" href="#/form/${t.formId}" data-tip="${esc(TIP.btnDisenar)}">Diseñar</a></div></div>
+  <div class="fld half"><label>Puede contener ${q(TIP.tHijos)}</label><div class="opts">${S.meta.tipos.map(o=>`<label data-tip="${esc(`Si está marcado, dentro de un nodo "${t.nombre}" se podrá crear un nodo "${o.nombre}"${o.id===t.id?' (anidado en sí mismo, sin límite de profundidad)':''}.`)}"><input type="checkbox" id="th_${t.id}_${o.id}" ${t.hijos.includes(o.id)?'checked':''} onchange="A.tHijo(${i},'${o.id}',this.checked)">${esc(o.nombre)}</label>`).join('')}</div></div>
+  <div class="fld full"><label>Columnas en los listados ${q(TIP.tCols)}</label><div class="opts">${(f?f.campos:[]).map(c=>`<label data-tip="${esc(`Campo "${c.label}" de la pantalla ${f.nombre}. Marcado = aparece como columna en los listados de ${t.nombre}.`)}"><input type="checkbox" id="tc_${t.id}_${c.key}" ${(t.columnas||[]).includes(c.key)?'checked':''} onchange="A.tCol(${i},'${c.key}',this.checked)">${esc(c.label)}</label>`).join('')||'<span class="note">La pantalla no tiene campos.</span>'}</div></div></div></div>`}).join('')+`</div>`);
 }
 
 /* ============ diseño: catálogos ============ */
@@ -444,31 +586,35 @@ function vCatalogos(sel){
  const cats=Object.values(S.meta.catalogos);const c=S.meta.catalogos[sel]||cats[0];
  setTop(`<span class="cur">Listas de opciones</span>`);
  const usos=c?Object.values(S.meta.formularios).flatMap(f=>f.campos.filter(x=>x.catalogo===c.id).map(x=>`${esc(f.nombre)} › ${esc(x.label)}`)):[];
- view(designBar('Una lista de opciones se define una vez y la pueden usar varios campos de varias pantallas.')+`<div class="page-head"><h1>Listas de opciones</h1><button class="btn pri" onclick="A.nuevoCat()">+ Nueva lista</button></div>
- <div class="cols" style="grid-template-columns:260px 1fr"><div class="card"><ul class="list">${cats.map(k=>`<li><a class="item ${c&&k.id===c.id?'on':''}" href="#/catalogos/${k.id}">${esc(k.nombre)}</a><span class="note">${k.opciones.length}</span></li>`).join('')}</ul></div>
- ${c?`<div class="card"><div class="page-head" style="margin-bottom:8px"><div><h2><input type="text" id="cn_${c.id}" value="${esc(c.nombre)}" oninput="A.cNombre('${c.id}',this.value)" style="font:inherit;border:0;border-bottom:1px dashed var(--line);background:none;color:inherit"></h2><div class="note">Usada en: ${usos.join(' · ')||'<i>ningún campo</i>'}</div></div><button class="btn sm" onclick="A.cAdd('${c.id}')">+ Opción</button></div>
- ${c.opciones.map((o,i)=>`<div class="drow"><div class="mv"><button onclick="A.cMov('${c.id}',${i},-1)">▲</button><button onclick="A.cMov('${c.id}',${i},1)">▼</button></div><div class="body"><div class="line"><input type="text" id="ce_${c.id}_${i}" value="${esc(o.etiqueta)}" class="lbl" oninput="A.cSet('${c.id}',${i},'etiqueta',this.value)" aria-label="Etiqueta"><span class="k">${esc(o.valor)}</span><input type="color" id="cc_${c.id}_${i}" value="${esc(o.color||'#8A94A0')}" oninput="A.cSet('${c.id}',${i},'color',this.value)" aria-label="Color"></div></div><button class="btn sm danger" onclick="A.cDel('${c.id}',${i})">Quitar</button></div>`).join('')}</div>`:'<div class="card empty">No hay listas.</div>'}</div>`);
+ view(designBar('Una lista de opciones se define una vez y la pueden usar varios campos de varias pantallas.')+`<div class="page-head"><h1>Listas de opciones ${q('Catálogos de valores reutilizables (Estados, Prioridades, Áreas…). Un campo de tipo lista, botones de opción o selección múltiple puede tomar sus opciones de aquí. Se definen una vez y se usan en muchas pantallas.')}</h1><button class="btn pri" onclick="A.nuevoCat()" data-tip="${esc(TIP.cNueva)}">+ Nueva lista</button></div>
+ <div class="cols" style="grid-template-columns:260px 1fr"><div class="card"><ul class="list">${cats.map(k=>`<li><a class="item ${c&&k.id===c.id?'on':''}" href="#/catalogos/${k.id}" data-tip="${esc(`Lista "${k.nombre}" (id interno: ${k.id}) con ${k.opciones.length} opciones. Haz clic para editarla.`)}">${esc(k.nombre)}</a><span class="note">${k.opciones.length}</span></li>`).join('')}</ul></div>
+ ${c?`<div class="card"><div class="page-head" style="margin-bottom:8px"><div><h2 style="display:flex;align-items:center"><input type="text" id="cn_${c.id}" value="${esc(c.nombre)}" oninput="A.cNombre('${c.id}',this.value)" style="font:inherit;border:0;border-bottom:1px dashed var(--line);background:none;color:inherit" data-tip="${esc(TIP.cNombre)}">${q(TIP.cNombre)}</h2><div class="note" data-tip="${esc(TIP.cUsada)}">Usada en: ${usos.join(' · ')||'<i>ningún campo</i>'}</div></div><button class="btn sm" onclick="A.cAdd('${c.id}')" data-tip="Agrega una opción al final. Solo pide la etiqueta; el valor interno se deriva solo.">+ Opción</button></div>
+ <div class="line" style="display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:6px"><span>Etiqueta ${q(TIP.cEtiqueta)}</span><span>Valor interno ${q(TIP.cValor)}</span><span>Color ${q(TIP.cColor)}</span></div>
+ ${c.opciones.map((o,i)=>`<div class="drow"><div class="mv"><button onclick="A.cMov('${c.id}',${i},-1)" data-tip="Sube la opción. El orden aquí es el orden en que se ofrecen en los desplegables.">▲</button><button onclick="A.cMov('${c.id}',${i},1)" data-tip="Baja la opción.">▼</button></div><div class="body"><div class="line"><input type="text" id="ce_${c.id}_${i}" value="${esc(o.etiqueta)}" class="lbl" oninput="A.cSet('${c.id}',${i},'etiqueta',this.value)" aria-label="Etiqueta" data-tip="${esc(TIP.cEtiqueta)}"><span class="k" data-tip="${esc(TIP.cValor)}">${esc(o.valor)}</span><input type="color" id="cc_${c.id}_${i}" value="${esc(o.color||'#8A94A0')}" oninput="A.cSet('${c.id}',${i},'color',this.value)" aria-label="Color" data-tip="${esc(TIP.cColor)}"></div></div><button class="btn sm danger" onclick="A.cDel('${c.id}',${i})" data-tip="${esc(TIP.cQuitarOp)}">Quitar</button></div>`).join('')}</div>`:'<div class="card empty">No hay listas.</div>'}</div>`);
 }
 
 /* ============ diseño: menú ============ */
 function vMenu(){
  setTop(`<span class="cur">Menú</span>`);
  const targets=m=>{switch(m.tipo){case 'lista':return S.meta.tipos.map(t=>`<option value="${t.id}" ${m.target===t.id?'selected':''}>${esc(t.nombre)}s</option>`).join('');case 'reporte':return S.meta.reportes.map(r=>`<option value="${r.id}" ${m.target===r.id?'selected':''}>${esc(r.nombre)}</option>`).join('');case 'config':return Object.entries(CONFIG_PANTALLAS).map(([k,v])=>`<option value="${k}" ${m.target===k?'selected':''}>${v}</option>`).join('');default:return ''}};
- view(designBar('El menú lateral se dibuja desde esta lista. Cambia el orden con las flechas: el efecto es inmediato a la izquierda.')+`<div class="page-head"><h1>Menú</h1><button class="btn pri" onclick="A.mAdd()">+ Agregar opción</button></div>
- <div class="card">${S.meta.menu.map((m,i)=>`<div class="drow ${m.visible===false?'off':''}"><div class="mv"><button onclick="A.mMov(${i},-1)">▲</button><button onclick="A.mMov(${i},1)">▼</button></div><div class="body"><div class="line">
-  <input type="text" id="mi_${m.id}" value="${esc(m.icono||'')}" style="width:44px;text-align:center" oninput="A.mSet(${i},'icono',this.value)" aria-label="Ícono" ${m.tipo==='grupo'?'disabled':''}>
-  <input type="text" id="ml_${m.id}" class="lbl" value="${esc(m.label)}" oninput="A.mSet(${i},'label',this.value)" aria-label="Texto">
-  <select id="mt_${m.id}" onchange="A.mSet(${i},'tipo',this.value,true)" aria-label="Tipo de opción"><option value="arbol" ${m.tipo==='arbol'?'selected':''}>Árbol de proyectos</option><option value="lista" ${m.tipo==='lista'?'selected':''}>Listado de un tipo</option><option value="reportes" ${m.tipo==='reportes'?'selected':''}>Lista de reportes</option><option value="reporte" ${m.tipo==='reporte'?'selected':''}>Un reporte</option><option value="config" ${m.tipo==='config'?'selected':''}>Pantalla de configuración</option><option value="url" ${m.tipo==='url'?'selected':''}>Enlace externo</option><option value="grupo" ${m.tipo==='grupo'?'selected':''}>Título de grupo</option></select>
-  ${['lista','reporte','config'].includes(m.tipo)?`<select id="mg_${m.id}" onchange="A.mSet(${i},'target',this.value)" aria-label="Destino">${targets(m)}</select>`:''}${m.tipo==='url'?`<input type="text" id="mg_${m.id}" value="${esc(m.target||'')}" placeholder="https://…" oninput="A.mSet(${i},'target',this.value)">`:''}
-  ${m.tipo!=='grupo'?`<label class="cb"><input type="checkbox" id="ms_${m.id}" ${m.sub?'checked':''} onchange="A.mSet(${i},'sub',this.checked)">Subopción</label>`:''}
-  <label class="cb"><input type="checkbox" id="mv_${m.id}" ${m.visible!==false?'checked':''} onchange="A.mSet(${i},'visible',this.checked)">Visible</label></div></div><button class="btn sm danger" onclick="A.mDel(${i})">Quitar</button></div>`).join('')}</div>`);
+ const destinoDesc=m=>{switch(m.tipo){case 'lista':return `Destino: el tipo de nodo "${tipo(m.target)?.nombre||m.target}" (definido por ustedes en Tipos de nodo).`;case 'reporte':return `Destino: el reporte "${S.meta.reportes.find(r=>r.id===m.target)?.nombre||m.target}" (definido por ustedes en Reportes).`;case 'config':return `Destino: la pantalla fija del sistema "${CONFIG_PANTALLAS[m.target]||m.target}".`;case 'url':return `Destino: ${m.target||'(sin URL todavía)'}.`;default:return 'No necesita destino.'}};
+ view(designBar('El menú lateral se dibuja desde esta lista. Cambia el orden con las flechas: el efecto es inmediato a la izquierda.')+`<div class="page-head"><div><h1>Menú ${q('El menú lateral completo. Cada fila es una opción; el orden de las filas es el orden en el menú. Una opción tiene un texto, un tipo (qué clase de cosa abre, lista fija del sistema) y un destino (cuál en concreto, definido por ustedes).')}</h1><div class="meta"><span class="tag fijo">fijo</span> = viene con el sistema &nbsp; <span class="tag def">definible</span> = lo crean ustedes</div></div><button class="btn pri" onclick="A.mAdd()" data-tip="${esc(TIP.mAgregar)}">+ Agregar opción</button></div>
+ <div class="card"><div class="line" style="display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:6px;flex-wrap:wrap"><span>Ícono ${q(TIP.mIcono)}</span><span>Texto ${q(TIP.mLabel)}</span><span>Tipo de opción <span class="tag fijo">fijo</span> ${q(TIP.mTipo)}</span><span>Destino <span class="tag def">definible</span> ${q(TIP.mDestino)}</span><span>Subopción ${q(TIP.mSub)}</span><span>Visible ${q(TIP.mVisible)}</span></div>
+ ${S.meta.menu.map((m,i)=>`<div class="drow ${m.visible===false?'off':''}"><div class="mv"><button onclick="A.mMov(${i},-1)" data-tip="${esc(TIP.mMover)}">▲</button><button onclick="A.mMov(${i},1)" data-tip="${esc(TIP.mMover)}">▼</button></div><div class="body"><div class="line">
+  <input type="text" id="mi_${m.id}" value="${esc(m.icono||'')}" style="width:44px;text-align:center" oninput="A.mSet(${i},'icono',this.value)" aria-label="Ícono" ${m.tipo==='grupo'?'disabled':''} data-tip="${esc(TIP.mIcono)}">
+  <input type="text" id="ml_${m.id}" class="lbl" value="${esc(m.label)}" oninput="A.mSet(${i},'label',this.value)" aria-label="Texto" data-tip="${esc(TIP.mLabel)}">
+  <select id="mt_${m.id}" onchange="A.mSet(${i},'tipo',this.value,true)" aria-label="Tipo de opción" data-tip="${esc('Tipo actual: '+MENU_TIPOS[m.tipo].label+' — '+MENU_TIPOS[m.tipo].desc+'\n\n'+TIP.mTipo)}">${Object.entries(MENU_TIPOS).map(([k,v])=>`<option value="${k}" ${m.tipo===k?'selected':''}>${v.label}</option>`).join('')}</select>
+  ${['lista','reporte','config'].includes(m.tipo)?`<select id="mg_${m.id}" onchange="A.mSet(${i},'target',this.value,true)" aria-label="Destino" data-tip="${esc(TIP.mDestino)}">${targets(m)}</select>`:''}${m.tipo==='url'?`<input type="text" id="mg_${m.id}" value="${esc(m.target||'')}" placeholder="https://…" oninput="A.mSet(${i},'target',this.value)" data-tip="Dirección web completa que se abrirá en otra pestaña.">`:''}
+  ${m.tipo!=='grupo'?`<label class="cb" data-tip="${esc(TIP.mSub)}"><input type="checkbox" id="ms_${m.id}" ${m.sub?'checked':''} onchange="A.mSet(${i},'sub',this.checked)">Subopción</label>`:''}
+  <label class="cb" data-tip="${esc(TIP.mVisible)}"><input type="checkbox" id="mv_${m.id}" ${m.visible!==false?'checked':''} onchange="A.mSet(${i},'visible',this.checked)">Visible</label></div>
+  <div class="hint"><b>${MENU_TIPOS[m.tipo].label}</b> · ${MENU_TIPOS[m.tipo].desc} ${esc(destinoDesc(m))}</div></div><button class="btn sm danger" onclick="A.mDel(${i})" data-tip="${esc(TIP.mQuitar)}">Quitar</button></div>`).join('')}</div>`);
 }
 
 /* ============ reportes ============ */
 function vReportes(){
  setTop(`<span class="cur">Reportes</span>`);
- view(`<div class="page-head"><div><h1>Reportes</h1><div class="meta">Cada reporte es una definición JSON: tipo de nodo, alcance, campos, filtro y agrupación. De ahí se genera la consulta.</div></div><button class="btn pri" onclick="A.rNuevo()">+ Nuevo reporte</button></div>
- <div class="card"><ul class="list">${S.meta.reportes.map(r=>`<li><div><a class="item" href="#/reporte/${r.id}">${esc(r.nombre)}</a><div class="note">${esc(tipo(r.tipo)?.nombre||r.tipo)}s${r.agrupar?` · agrupado por ${esc(campoDe(r.tipo,r.agrupar)?.label||r.agrupar)}`:''}</div></div><div><a class="btn sm" href="#/reporte/${r.id}">Ejecutar</a> <a class="btn sm design" href="#/reporte/${r.id}/design">Diseñar</a></div></li>`).join('')}</ul></div>`);
+ view(`<div class="page-head"><div><h1>Reportes ${q('Los reportes definidos por ustedes. Cada uno es un documento JSON (tipo de nodo, alcance, columnas, filtro, agrupación) del que el sistema genera la consulta. No hay reportes programados uno por uno.')}</h1><div class="meta">Cada reporte es una definición JSON: tipo de nodo, alcance, campos, filtro y agrupación. De ahí se genera la consulta.</div></div><button class="btn pri" onclick="A.rNuevo()" data-tip="${esc(TIP.rNuevo)}">+ Nuevo reporte</button></div>
+ <div class="card"><ul class="list">${S.meta.reportes.map(r=>`<li><div><a class="item" href="#/reporte/${r.id}">${esc(r.nombre)}</a><div class="note">${esc(tipo(r.tipo)?.nombre||r.tipo)}s${r.agrupar?` · agrupado por ${esc(campoDe(r.tipo,r.agrupar)?.label||r.agrupar)}`:''}</div></div><div><a class="btn sm" href="#/reporte/${r.id}" data-tip="Corre el reporte con los datos actuales y muestra la tabla.">Ejecutar</a> <a class="btn sm design" href="#/reporte/${r.id}/design" data-tip="${esc(TIP.rDisenar)}">Diseñar</a></div></li>`).join('')}</ul></div>`);
 }
 function ejecutarReporte(r){
  let ns=S.datos.nodos.filter(n=>n.tipo===r.tipo);
@@ -487,25 +633,25 @@ function pipelineMongo(r){
 function vReporte(rid,mode){
  const r=S.meta.reportes.find(x=>x.id===rid);if(!r){location.hash='#/reportes';return}
  const f=formDeTipo(r.tipo);const design=mode==='design';
- setTop(`<a href="#/reportes">Reportes</a><span class="sep">›</span><span class="cur">${esc(r.nombre)}</span>`,design?`<a class="btn" href="#/reporte/${rid}">← Ejecutar</a>`:designBtn(`#/reporte/${rid}/design`,'Diseñar este reporte'));
+ setTop(`<a href="#/reportes">Reportes</a><span class="sep">›</span><span class="cur">${esc(r.nombre)}</span>`,design?`<a class="btn" href="#/reporte/${rid}" data-tip="Cierra el panel de definición y muestra solo el resultado.">← Ejecutar</a>`:designBtn(`#/reporte/${rid}/design`,'Diseñar este reporte',TIP.rDisenar));
  const base=[{key:'codigo',label:'Código'},{key:'nombre',label:'Nombre'},{key:'ruta',label:'Ubicación'}];
  const cols=r.campos.map(k=>base.find(b=>b.key===k)||f?.campos.find(c=>c.key===k)).filter(Boolean);
  const {ns,grupos}=ejecutarReporte(r);
  const celda=(n,c)=>{if(c.key==='codigo')return `<td class="code">${esc(n.codigo)}</td>`;if(c.key==='nombre')return `<td><a href="#/nodo/${n.id}">${esc(n.nombre)}</a></td>`;if(c.key==='ruta')return `<td class="note">${esc(rutaStr(n.id))}</td>`;return `<td class="${c.tipo==='numero'?'num':''}">${mostrarValor(c,n.datos[c.key])}</td>`};
  const numCols=cols.filter(c=>c.tipo==='numero');
  const filas=Object.entries(grupos).map(([g,arr])=>{const fg=campoDe(r.tipo,r.agrupar);const head=r.agrupar?`<tr class="group-row"><td colspan="${cols.length}">${fg?mostrarValor(fg,g==='(sin valor)'?'':g):esc(g)} <span class="note">· ${arr.length} registro${arr.length!==1?'s':''}${numCols.map(c=>` · ${esc(c.label)}: ${fmtNum(arr.reduce((s,n)=>s+(Number(n.datos[c.key])||0),0))}`).join('')}</span></td></tr>`:'';return head+arr.map(n=>`<tr>${cols.map(c=>celda(n,c)).join('')}</tr>`).join('')}).join('');
- const dsg=design?`<div class="card"><h3>Definición</h3><div class="form-grid">
-  <div class="fld half"><label for="rn">Nombre</label><input type="text" id="rn" value="${esc(r.nombre)}" oninput="A.rSet('${rid}','nombre',this.value)"></div>
-  <div class="fld half"><label for="rt">Tipo de nodo</label><select id="rt" onchange="A.rSet('${rid}','tipo',this.value,true)">${S.meta.tipos.map(t=>`<option value="${t.id}" ${t.id===r.tipo?'selected':''}>${esc(t.nombre)}</option>`).join('')}</select></div>
-  <div class="fld half"><label for="ra">Alcance (solo debajo de…)</label><select id="ra" onchange="A.rSet('${rid}','alcance',this.value,true)"><option value="">Todo el sistema</option>${S.datos.nodos.filter(n=>hijos(n.id).length).map(n=>`<option value="${n.id}" ${n.id===r.alcance?'selected':''}>${esc(n.codigo)} · ${esc(n.nombre)}</option>`).join('')}</select></div>
-  <div class="fld half"><label for="rg">Agrupar por</label><select id="rg" onchange="A.rSet('${rid}','agrupar',this.value,true)"><option value="">(sin agrupar)</option>${(f?.campos||[]).filter(c=>['lista','radio','checkbox','texto'].includes(c.tipo)).map(c=>`<option value="${c.key}" ${c.key===r.agrupar?'selected':''}>${esc(c.label)}</option>`).join('')}</select></div>
-  <div class="fld half"><label for="rfc">Filtrar: campo</label><select id="rfc" onchange="A.rFiltro('${rid}','campo',this.value,true)"><option value="">(sin filtro)</option>${(f?.campos||[]).map(c=>`<option value="${c.key}" ${c.key===r.filtro?.campo?'selected':''}>${esc(c.label)}</option>`).join('')}</select></div>
-  <div class="fld half"><label for="rfv">Filtrar: valor</label>${(()=>{const fc=f?.campos.find(c=>c.key===r.filtro?.campo);if(fc&&['lista','radio','multiple'].includes(fc.tipo))return `<select id="rfv" onchange="A.rFiltro('${rid}','valor',this.value,true)"><option value="">— cualquiera —</option>${opciones(fc).map(o=>`<option value="${esc(o.valor)}" ${o.valor===r.filtro.valor?'selected':''}>${esc(o.etiqueta)}</option>`).join('')}</select>`;return `<input type="text" id="rfv" value="${esc(r.filtro?.valor||'')}" oninput="A.rFiltro('${rid}','valor',this.value)" ${fc?'':'disabled'}>`})()}</div>
-  <div class="fld full"><label>Columnas</label><div class="opts">${base.concat(f?.campos||[]).map(c=>`<label><input type="checkbox" id="rc_${c.key}" ${r.campos.includes(c.key)?'checked':''} onchange="A.rCol('${rid}','${c.key}',this.checked)">${esc(c.label)}</label>`).join('')}</div></div></div>
-  <div class="actions"><button class="btn danger" onclick="A.rDel('${rid}')">Eliminar reporte</button><a class="btn pri" href="#/reporte/${rid}">Ver resultado</a></div></div>`:'';
- view((design?designBar('Un reporte se define eligiendo tipo, alcance, columnas, filtro y agrupación. Abajo se ve el resultado y la consulta generada.'):'')+`<div class="page-head"><div><h1>${esc(r.nombre)}</h1><div class="meta">${ns.length} ${esc(tipo(r.tipo)?.nombre.toLowerCase()||'')}s${r.alcance?` debajo de <a href="#/nodo/${r.alcance}">${esc(nodo(r.alcance)?.nombre||'')}</a>`:''}${r.filtro?.campo&&r.filtro.valor!==''?` · filtro ${esc(campoDe(r.tipo,r.filtro.campo)?.label||r.filtro.campo)} = ${esc(r.filtro.valor)}`:''}</div></div><div><button class="btn" onclick="A.copiar(document.getElementById('rtbl').innerText,'Tabla copiada')">Copiar tabla</button></div></div>
- <div class="stack">${dsg}<div class="card tbl-wrap"><table id="rtbl"><thead><tr>${cols.map(c=>`<th class="${c.tipo==='numero'?'num':''}">${esc(c.label)}</th>`).join('')}</tr></thead><tbody>${filas||`<tr><td colspan="${cols.length||1}" class="empty">Sin resultados.</td></tr>`}</tbody></table></div>
- <div class="cols"><div class="card"><h3>Definición del reporte (JSON)</h3><pre>${esc(JSON.stringify(r,null,2))}</pre></div><div class="card"><h3>Consulta que se generaría en MongoDB</h3><pre>${esc(pipelineMongo(r))}</pre><div class="note" style="margin-top:8px">La definición se traduce a un <i>aggregation pipeline</i>. El alcance usa el campo <span class="code">path</span> (ruta materializada de ancestros) para tomar todo un subárbol en una sola consulta.</div></div></div></div>`);
+ const dsg=design?`<div class="card"><h3>Definición ${q('Todo lo que define el reporte. Las alternativas de columnas, filtro y agrupación salen de la ficha del tipo elegido: si agregan un campo a la ficha, aparece aquí sin programar nada.')}</h3><div class="form-grid">
+  <div class="fld half"><label for="rn">Nombre ${q(TIP.rNombre)}</label><input type="text" id="rn" value="${esc(r.nombre)}" oninput="A.rSet('${rid}','nombre',this.value)" data-tip="${esc(TIP.rNombre)}"></div>
+  <div class="fld half"><label for="rt">Tipo de nodo ${q(TIP.rTipo)}</label><select id="rt" onchange="A.rSet('${rid}','tipo',this.value,true)" data-tip="${esc(TIP.rTipo)}">${S.meta.tipos.map(t=>`<option value="${t.id}" ${t.id===r.tipo?'selected':''}>${esc(t.nombre)}</option>`).join('')}</select></div>
+  <div class="fld half"><label for="ra">Alcance (solo debajo de…) ${q(TIP.rAlcance)}</label><select id="ra" onchange="A.rSet('${rid}','alcance',this.value,true)" data-tip="${esc(TIP.rAlcance)}"><option value="">Todo el sistema</option>${S.datos.nodos.filter(n=>hijos(n.id).length).map(n=>`<option value="${n.id}" ${n.id===r.alcance?'selected':''}>${esc(n.codigo)} · ${esc(n.nombre)}</option>`).join('')}</select></div>
+  <div class="fld half"><label for="rg">Agrupar por ${q(TIP.rAgrupar)}</label><select id="rg" onchange="A.rSet('${rid}','agrupar',this.value,true)" data-tip="${esc(TIP.rAgrupar)}"><option value="">(sin agrupar)</option>${(f?.campos||[]).filter(c=>['lista','radio','checkbox','texto'].includes(c.tipo)).map(c=>`<option value="${c.key}" ${c.key===r.agrupar?'selected':''}>${esc(c.label)}</option>`).join('')}</select></div>
+  <div class="fld half"><label for="rfc">Filtrar: campo ${q(TIP.rFiltroCampo)}</label><select id="rfc" onchange="A.rFiltro('${rid}','campo',this.value,true)" data-tip="${esc(TIP.rFiltroCampo)}"><option value="">(sin filtro)</option>${(f?.campos||[]).map(c=>`<option value="${c.key}" ${c.key===r.filtro?.campo?'selected':''}>${esc(c.label)}</option>`).join('')}</select></div>
+  <div class="fld half"><label for="rfv">Filtrar: valor ${q(TIP.rFiltroValor)}</label>${(()=>{const fc=f?.campos.find(c=>c.key===r.filtro?.campo);if(fc&&['lista','radio','multiple'].includes(fc.tipo))return `<select id="rfv" onchange="A.rFiltro('${rid}','valor',this.value,true)" data-tip="${esc(TIP.rFiltroValor)}"><option value="">— cualquiera —</option>${opciones(fc).map(o=>`<option value="${esc(o.valor)}" ${o.valor===r.filtro.valor?'selected':''}>${esc(o.etiqueta)}</option>`).join('')}</select>`;return `<input type="text" id="rfv" value="${esc(r.filtro?.valor||'')}" oninput="A.rFiltro('${rid}','valor',this.value)" ${fc?'':'disabled'} data-tip="${esc(TIP.rFiltroValor)}">`})()}</div>
+  <div class="fld full"><label>Columnas ${q(TIP.rCols)}</label><div class="opts">${base.concat(f?.campos||[]).map(c=>`<label data-tip="${esc(base.some(b=>b.key===c.key)?`"${c.label}" es una columna fija del sistema: la tiene todo nodo, sea del tipo que sea.`:`"${c.label}" es un campo de la ficha de ${tipo(r.tipo)?.nombre||r.tipo} (tipo ${TIPOS_CAMPO[c.tipo]||c.tipo}).`)}"><input type="checkbox" id="rc_${c.key}" ${r.campos.includes(c.key)?'checked':''} onchange="A.rCol('${rid}','${c.key}',this.checked)">${esc(c.label)}${base.some(b=>b.key===c.key)?' <span class="tag fijo">fijo</span>':''}</label>`).join('')}</div></div></div>
+  <div class="actions"><button class="btn danger" onclick="A.rDel('${rid}')" data-tip="${esc(TIP.rEliminar)}">Eliminar reporte</button><a class="btn pri" href="#/reporte/${rid}">Ver resultado</a></div></div>`:'';
+ view((design?designBar('Un reporte se define eligiendo tipo, alcance, columnas, filtro y agrupación. Abajo se ve el resultado y la consulta generada.'):'')+`<div class="page-head"><div><h1>${esc(r.nombre)}</h1><div class="meta">${ns.length} ${esc(tipo(r.tipo)?.nombre.toLowerCase()||'')}s${r.alcance?` debajo de <a href="#/nodo/${r.alcance}">${esc(nodo(r.alcance)?.nombre||'')}</a>`:''}${r.filtro?.campo&&r.filtro.valor!==''?` · filtro ${esc(campoDe(r.tipo,r.filtro.campo)?.label||r.filtro.campo)} = ${esc(r.filtro.valor)}`:''}</div></div><div><button class="btn" onclick="A.copiar(document.getElementById('rtbl').innerText,'Tabla copiada')" data-tip="${esc(TIP.rCopiar)}">Copiar tabla</button></div></div>
+ <div class="stack">${dsg}<div class="card tbl-wrap"><table id="rtbl"><thead><tr>${cols.map(c=>`<th class="${c.tipo==='numero'?'num':''}">${esc(c.label)}${c.key==='ruta'?' '+q(TIP.ubicacion):c.key==='codigo'?' '+q(TIP.codigo):''}</th>`).join('')}</tr></thead><tbody>${filas||`<tr><td colspan="${cols.length||1}" class="empty">Sin resultados.</td></tr>`}</tbody></table></div>
+ <div class="cols"><div class="card"><h3>Definición del reporte (JSON) ${q(TIP.rDef)}</h3><pre>${esc(JSON.stringify(r,null,2))}</pre></div><div class="card"><h3>Consulta que se generaría en MongoDB ${q(TIP.rPipe)}</h3><pre>${esc(pipelineMongo(r))}</pre><div class="note" style="margin-top:8px">La definición se traduce a un <i>aggregation pipeline</i>. El alcance usa el campo <span class="code">path</span> (ruta materializada de ancestros) para tomar todo un subárbol en una sola consulta.</div></div></div></div>`);
 }
 
 /* ============ JSON del sistema ============ */
@@ -513,8 +659,47 @@ function vJson(tab){
  tab=tab||'meta';setTop(`<span class="cur">JSON del sistema</span>`);
  const obj=tab==='datos'?S.datos:S.meta;
  view(`<div class="page-head"><div><h1>JSON del sistema</h1><div class="meta">La definición (meta) describe pantallas, tipos, listas, menú y reportes. Los datos son documentos con un objeto <span class="code">datos</span> libre, moldeado por la definición.</div></div><div><button class="btn" onclick="A.copiar(JSON.stringify(S.${tab},null,2),'JSON copiado')">Copiar</button></div></div>
- <div class="tabs"><a href="#/json/meta" class="${tab==='meta'?'on':''}">Definición (meta)</a><a href="#/json/datos" class="${tab==='datos'?'on':''}">Datos</a><a href="#/json/importar" class="${tab==='importar'?'on':''}">Importar</a></div>
+ <div class="tabs"><a href="#/json/meta" class="${tab==='meta'?'on':''}" data-tip="${esc(TIP.jMeta)}">Definición (meta)</a><a href="#/json/datos" class="${tab==='datos'?'on':''}" data-tip="${esc(TIP.jDatos)}">Datos</a><a href="#/json/importar" class="${tab==='importar'?'on':''}" data-tip="${esc(TIP.jImportar)}">Importar</a></div>
  ${tab==='importar'?`<div class="card"><h2>Reemplazar la definición</h2><div class="note" style="margin-bottom:8px">Pega aquí un JSON de definición (meta) exportado de otro ambiente. Así se lleva lo diseñado con el cliente al sistema real.</div><textarea id="imp" style="width:100%;min-height:220px;font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:6px;padding:10px;background:var(--panel)"></textarea><div class="actions"><button class="btn pri" onclick="A.importar()">Importar definición</button></div></div>`:`<div class="card"><pre>${esc(JSON.stringify(obj,null,2))}</pre></div>`}`);
+}
+
+/* ============ ayuda y glosario ============ */
+function vAyuda(){
+ setTop(`<span class="cur">Ayuda y glosario</span>`);
+ const dl=(dic,fmt)=>Object.entries(dic).map(([k,v])=>`<dt>${esc(fmt(k,v)[0])} <span class="code">${k}</span></dt><dd>${esc(fmt(k,v)[1])}</dd>`).join('');
+ view(`<div class="page-head"><div><h1>Ayuda y glosario</h1><div class="meta">Qué es cada cosa, de dónde sale y quién la define. En toda pantalla, pasa el mouse por un <span class="q" style="margin:0">?</span> o por cualquier control para ver su explicación.</div></div></div>
+ <div class="stack">
+ <div class="card"><h2>Dos clases de cosas</h2><div class="kv" style="row-gap:10px">
+  <dt><span class="tag fijo">fijo</span></dt><dd>Viene programado en el sistema. Son los "ladrillos": los tipos de campo que existen, las clases de destino que puede abrir el menú, las pantallas de configuración, las columnas Código / Nombre / Ubicación, las clases de archivo. No se crean ni se cambian desde una pantalla; cambiarlos es trabajo de desarrollo.</dd>
+  <dt><span class="tag def">definible</span></dt><dd>Lo crean ustedes usando los ladrillos, sin programar: tipos de nodo, pantallas y sus campos, listas de opciones, opciones del menú, columnas de los listados, reportes. Todo eso vive en el JSON de definición (menú › JSON del sistema › Definición) y se puede exportar e importar.</dd></div></div>
+ <div class="card glos"><h2>Conceptos <span class="tag def">definibles</span></h2><dl style="margin:0">
+  <dt>Nodo</dt><dd>Cualquier elemento del árbol: un proyecto, una etapa, una tarea o lo que ustedes definan. Todos se guardan igual: tipo, padre, código, nombre y un objeto "datos" libre que la pantalla del tipo moldea.</dd>
+  <dt>Tipo de nodo</dt><dd>${esc(TIP.tipoNodo)}</dd>
+  <dt>Pantalla (formulario)</dt><dd>La lista ordenada de campos con que se edita un tipo de nodo. Cada campo tiene etiqueta, clave interna, tipo de campo, y opciones como requerido, visible, ancho, ayuda y condición.</dd>
+  <dt>Clave interna (key)</dt><dd>${esc(TIP.dsgKey)}</dd>
+  <dt>Lista de opciones</dt><dd>Catálogo de valores con etiqueta, valor interno y color, compartido por varios campos (Estados, Prioridades, Áreas…).</dd>
+  <dt>Condición "mostrar solo si"</dt><dd>${esc(TIP.dsgCond)}</dd>
+  <dt>Columnas en los listados</dt><dd>${esc(TIP.tCols)}</dd>
+  <dt>Opción de menú</dt><dd>Una entrada del menú lateral: texto, ícono, tipo de opción (fijo), destino (definible), subopción, visible.</dd>
+  <dt>Reporte</dt><dd>Definición JSON con tipo de nodo, alcance, columnas, filtro y agrupación. El sistema la convierte en una consulta y muestra la tabla.</dd>
+  <dt>Constancia (archivo)</dt><dd>Documento o email adjunto a un nodo como evidencia de lo entregado por las partes.</dd>
+  <dt>Historial</dt><dd>${esc(TIP.tabHistorial)}</dd>
+  <dt>Código</dt><dd>${esc(TIP.codigo)}</dd>
+  <dt>Ubicación / path</dt><dd>${esc(TIP.ubicacion)}</dd></dl></div>
+ <div class="card glos"><h2>Tipos de campo <span class="tag fijo">fijo</span></h2><div class="note">Los controles con que se puede construir una pantalla. Elegir uno u otro cambia cómo se captura y cómo se guarda el valor.</div><dl style="margin:0">${dl(TIPOS_CAMPO,(k,v)=>[v,TIPOS_CAMPO_DESC[k]])}</dl></div>
+ <div class="card glos"><h2>Tipos de opción de menú <span class="tag fijo">fijo</span></h2><div class="note">Las clases de destino que el menú sabe abrir. El destino concreto (qué tipo, qué reporte, qué pantalla) sí es definible.</div><dl style="margin:0">${dl(MENU_TIPOS,(k,v)=>[v.label,v.desc])}</dl></div>
+ <div class="card glos"><h2>Pantallas de configuración <span class="tag fijo">fijo</span></h2><div class="note">Las pantallas de diseño que trae el sistema. Una opción de menú de tipo "Pantalla de configuración" apunta a una de ellas.</div><dl style="margin:0">
+  <dt>Pantallas <span class="code">formularios</span></dt><dd>Lista de todas las pantallas definidas y acceso a su diseñador.</dd>
+  <dt>Tipos de nodo <span class="code">tipos</span></dt><dd>Qué clases de nodo existen, qué pantalla usa cada una, qué puede contener y qué columnas lista.</dd>
+  <dt>Listas de opciones <span class="code">catalogos</span></dt><dd>Catálogos de valores compartidos.</dd>
+  <dt>Menú <span class="code">menu</span></dt><dd>Orden, textos y destinos del menú lateral.</dd>
+  <dt>JSON del sistema <span class="code">json</span></dt><dd>Ver, copiar e importar la definición y los datos.</dd>
+  <dt>Ayuda y glosario <span class="code">ayuda</span></dt><dd>Esta pantalla.</dd></dl></div>
+ <div class="card glos"><h2>Otras listas fijas</h2><dl style="margin:0">
+  <dt>Clase de archivo</dt><dd>Documento o Email. Para email se piden además remitente, destinatario y asunto.</dd>
+  <dt>Ancho de campo</dt><dd>Media fila o fila completa, dentro de la grilla de dos columnas de la ficha.</dd>
+  <dt>Columnas base de reportes y listados</dt><dd>Código, Nombre y Ubicación: las tiene todo nodo, por eso no dependen de la pantalla.</dd></dl></div>
+ </div>`);
 }
 
 /* ============ acciones ============ */
