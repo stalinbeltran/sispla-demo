@@ -555,6 +555,7 @@ const designBar=txt=>`<div class="design-bar"><b data-tip="${esc(TIP.diseñoBar)
 
 /* ============ vista: árbol ============ */
 let menuPlegado=true;try{menuPlegado=localStorage.getItem(LS+'-menu')!=='0'}catch(e){} /* menú lateral reducido a íconos; plegado por defecto */
+let ultimoNodo=null,ultimoPendiente=false;try{ultimoNodo=localStorage.getItem(LS+'-ultimo');ultimoPendiente=!!ultimoNodo}catch(e){} /* último nodo abierto: se resalta en Proyectos */
 let arbolVisible=true;try{arbolVisible=localStorage.getItem(LS+'-arbol')!=='0'}catch(e){} /* panel de árbol junto a la ficha */
 const abiertos=new Set(); /* nodos desplegados en el árbol; se conserva mientras navegas */
 const tiposRaiz=()=>S.meta.tipos.filter(t=>t.id==='proyecto'||!S.meta.tipos.some(o=>o.hijos.includes(t.id)));
@@ -563,7 +564,10 @@ function arbolHtml(pid,actual){const hs=hijos(pid);if(!hs.length)return '';retur
   return `<li><div class="row ${n.id===actual?'cur':''}"><span class="tg" ${c?`onclick="A.plegar(this,'${n.id}',event)" style="cursor:pointer" data-tip="Pliega o despliega los internos de este nodo. Con Alt + clic se despliega o pliega la rama completa. Por defecto todo está plegado. Este triángulo es fijo del sistema (parte de la vista de árbol); no se define en ninguna pantalla."`:''}>${c?(abiertos.has(n.id)?'▾':'▸'):''}</span><a href="#/nodo/${n.id}" data-tip="${esc((t?.nombre||n.tipo)+' · '+n.codigo)}">${esc(n.nombre)}</a><span class="fin">${o?`<i class="dot" style="background:${esc(o.color||'var(--muted)')}" data-tip="${esc(o.etiqueta)}"></i>`:''}${c?`<span class="cnt" data-tip="${esc(TIP.internos)}">${c}</span>`:''}</span><span class="acts">${t?.hijos?.length?`<button class="act" onclick="A.menuNuevo(event,'${n.id}')" data-tip="${esc(TIP.nuevoInterno)}">+</button>`:''}<button class="act del" onclick="event.stopPropagation();A.borrarNodo('${n.id}')" data-tip="${esc(TIP.eliminar)}">×</button></span></div>${arbolHtml(n.id,actual)}</li>`}).join('')+'</ul>'}
 function vArbol(){
  setTop(`<span class="cur">Proyectos</span>`,designBtn('#/tipos','Diseñar tipos y jerarquía',TIP.arbolTipos));
- view(`<div class="card tree">${cabeceraArbol(false)}${arbolHtml(null)||'<div class="empty">Aún no hay proyectos.</div>'}</div>`);
+ if(ultimoNodo&&!nodo(ultimoNodo))ultimoNodo=null;
+ if(ultimoNodo&&ultimoPendiente){ancestros(ultimoNodo).forEach(a=>abiertos.add(a.id));ultimoPendiente=false}
+ view(`<div class="card tree">${cabeceraArbol(false)}${arbolHtml(null,ultimoNodo)||'<div class="empty">Aún no hay proyectos.</div>'}</div>`);
+ setTimeout(()=>{const r=document.querySelector('.tree .row.cur');if(!r)return;const b=r.getBoundingClientRect();if(b.top<70||b.bottom>window.innerHeight)r.scrollIntoView({block:'center'})},0);
 }
 
 /* ============ vista: nodo ============ */
@@ -571,6 +575,7 @@ function vNodo(id,tab){
  const n=nodo(id);if(!n){location.hash='#/arbol';return}
  const t=tipo(n.tipo);const f=form(t.formId);
  const crumbs=`<a href="#/arbol">Proyectos</a>`+ancestros(id).map(a=>`<span class="sep">›</span><a href="#/nodo/${a.id}">${esc(a.nombre)}</a>`).join('')+`<span class="sep">›</span><span class="cur">${esc(n.nombre)}</span>`;
+ ultimoNodo=id;ultimoPendiente=false;try{localStorage.setItem(LS+'-ultimo',id)}catch(e){}
  ancestros(id).forEach(a=>abiertos.add(a.id));if(hijos(id).length)abiertos.add(id); /* la rama del nodo actual siempre se ve en el panel */
  setTop(crumbs,`<button class="btn sm" onclick="A.arbolToggle()" data-tip="${esc(TIP.arbolPanel)}">${arbolVisible?'Ocultar árbol':'Mostrar árbol'}</button> `+designBtn('#/form/'+t.formId));
  const admiteArchivos=t.archivos!==false;if(tab==='archivos'&&!admiteArchivos)tab='datos';
