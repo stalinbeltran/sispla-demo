@@ -222,7 +222,48 @@ Para cada una anoto lo que asumí en el mock. Si el supuesto vale, no hay que re
 
 ---
 
-## 7. Anotado para el futuro (fuera de alcance ahora)
+## 7. Requisitos transversales para la implementación
+
+Dos decisiones que atraviesan todo el diseño. No están en el mock, pero condicionan la elección de tecnología y la forma de programar cada módulo, así que quedan fijadas desde ahora.
+
+### 7.1 Búsqueda en todos los niveles
+
+Objetivo: que una persona encuentre un dato **sin saber en qué proyecto, etapa, tarea o archivo está**. Una sola caja de búsqueda, siempre visible, recorre todos los niveles de la base:
+
+| Qué se busca | Dónde |
+|---|---|
+| Nodos | `nombre`, `codigo` y todo valor de texto dentro de `datos`, a cualquier profundidad del árbol |
+| Archivos | nombre del archivo; en emails, de/para/asunto; *futuro:* texto extraído del contenido (PDF, Word, `.eml`) |
+| Historial | valores "antes" y "después" (permite hallar un dato que alguien borró o cambió) |
+| Definición | etiquetas de campos, opciones de listas, nombres de tipos y reportes, para que el consultor encuentre "dónde definí X" |
+
+Reglas:
+
+- **Resultado mixto.** Cada fila indica tipo de documento, ruta en el árbol (`path` resuelto a nombres), el campo donde apareció el texto y un enlace directo al nodo. Se agrupa por tipo y se ordena por relevancia.
+- **Se busca por etiqueta, no solo por valor interno.** Buscar "En curso" debe hallar nodos con `estado: "en_curso"`. La búsqueda consulta los catálogos para traducir.
+- **Filtros opcionales** por tipo de nodo, alcance (subárbol) y rango de fechas, con la misma lógica que los reportes.
+- **Nada que declarar.** Un campo nuevo es buscable desde que se guarda el primer valor. El índice se construye a partir de los documentos, no de una lista fija de campos; de lo contrario, cada campo agregado en caliente exigiría tocar la búsqueda.
+- **Insensible a mayúsculas y tildes.** "planos" halla "Planos" y "Entrega de planós".
+
+Implementación sugerida sobre MongoDB: un campo `texto` materializado por documento (concatenación de nombre, código y valores de `datos` ya traducidos a etiquetas), actualizado en cada guardado e indexado con índice de texto o Atlas Search; como alternativa, índice *wildcard* sobre `datos.*`. Para el contenido de archivos, extraer texto al subir y guardarlo en `archivos.texto` con el mismo esquema. En el mock basta una función `buscar(q)` que recorra nodos, archivos, historial y definición en memoria y devuelva filas con ese formato.
+
+### 7.2 Interrelaciones y elección NoSQL
+
+Casi todo está conectado, y las conexiones van a crecer: nodo ↔ padre e hijos (`path`), nodo ↔ archivos, nodo ↔ historial, nodo ↔ nodo (campo de tipo referencia), nodo ↔ definición (tipo, formulario, catálogo), reporte ↔ tipo. A medida que aparezcan contactos, contratos, partidas de presupuesto o empresas, surgirán relaciones que hoy no se conocen. El diseño debe permitir agregarlas sin migración y sin que las existentes se rompan.
+
+Principios:
+
+1. **Base de documentos para el núcleo.** MongoDB o compatible. Es lo que hace posible el objeto `datos` libre y la definición en caliente. Un motor relacional obligaría a una migración por cada campo o relación nueva, que es justo lo que se quiere evitar.
+2. **Las relaciones son referencias por id dentro de documentos**, nunca columnas fijas ni tablas intermedias. Un enlace nuevo es un campo más de tipo referencia en la ficha, definido desde el diseñador; el campo declara a qué tipo apunta y con eso la pantalla, la búsqueda y los reportes saben cómo seguirlo.
+3. **Navegables en ambos sentidos.** Desde un nodo se puede listar "quién me referencia" (`$lookup` sobre `datos.<campo>` o índice inverso). Ejemplo: desde un contacto, ver todas las tareas donde es responsable.
+4. **Embeber lo que vive y muere con el nodo; referenciar lo que se comparte.** Filas de una tabla repetible van embebidas; contactos, catálogos y otros nodos van por referencia.
+5. **Integridad blanda.** Borrar o mover un nodo no bloquea por referencias. La interfaz muestra la referencia huérfana marcada, y una tarea de verificación las lista para corregirlas. No se usan claves foráneas rígidas.
+6. **`path` materializado como relación principal del árbol.** Permite subárbol completo, alcance de reportes y archivos heredados con una sola consulta. Si más adelante hacen falta preguntas de grafo profundas ("qué depende de qué a N saltos"), se evalúa `$graphLookup` primero; una base de grafos solo si no alcanza.
+7. **Colección genérica de relaciones como salida de emergencia.** Si un cliente necesita un vínculo que no cabe como campo de ficha (muchos a muchos con atributos propios), se usa una colección `relaciones` con `{ de, a, tipo, datos }`, también definible, sin cambiar el modelo.
+
+---
+
+## 8. Anotado para el futuro (fuera de alcance ahora)
 
 - Login, roles y permisos. Nota de diseño: los permisos también pueden ser definibles (por tipo de nodo, por campo, por rama del árbol) y guardarse en la misma colección de definición.
 - Almacenamiento físico de archivos y visor integrado.
@@ -233,5 +274,5 @@ Para cada una anoto lo que asumí en el mock. Si el supuesto vale, no hay que re
 - API para integraciones y carga masiva (importar un Excel de tareas).
 - Idiomas: las etiquetas ya viven en la definición, así que traducir es agregar un `label` por idioma.
 - Versionado y ambientes de la definición (diseño → prueba → producción), con diff entre versiones.
-- Búsqueda de texto libre sobre nombre, `datos` y contenido de archivos.
-- Elección de tecnología (base de documentos, framework web, almacenamiento de archivos).
+- Búsqueda de texto libre: requisitos fijados en la sección 7.1; falta implementarla en el mock.
+- Elección de tecnología: la base de documentos queda decidida por la sección 7.2; faltan framework web y almacenamiento de archivos.
