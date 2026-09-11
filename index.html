@@ -56,6 +56,7 @@ nav .ic{width:16px;text-align:center;opacity:.85;font-size:12px}
 .app.menu-plegado .menu-tg{margin-inline:6px;padding-inline:0}
 main{min-width:0;display:flex;flex-direction:column}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:10px;padding-inline:24px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+#topbtn{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .crumbs{font-size:13px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .crumbs a{color:var(--muted);text-decoration:none}.crumbs a:hover{color:var(--accent)}
 .crumbs .sep{opacity:.5}.crumbs .cur{color:var(--ink);font-weight:500}
@@ -134,17 +135,18 @@ td a{text-decoration:none;font-weight:500}
 .tree .act{border:0;background:transparent;color:var(--muted);padding:0 5px;border-radius:4px;font-size:13px;line-height:18px}
 .tree .act:hover{background:var(--panel);color:var(--accent)}
 .tree .act.del:hover{color:var(--bad)}
-.explorador .exp-head .act{border:0;background:transparent;color:var(--accent);font-size:15px;line-height:16px;padding:0 4px;border-radius:4px}
-.explorador .exp-head .act:hover{background:var(--accent-soft)}
+.tree .exp-head{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 6px 8px;margin-bottom:6px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
+.tree .exp-head b{color:var(--ink);font-weight:600;white-space:nowrap}
+.tree .exp-head a.act{text-decoration:none}
+.tree .exp-acts{display:flex;gap:2px;align-items:center}
+.tree .exp-head .act{border:0;background:transparent;color:var(--accent);font-size:15px;line-height:16px;padding:0 5px;border-radius:4px}
+.tree .exp-head .act:hover{background:var(--accent-soft)}
 #popm{position:fixed;z-index:40;display:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:var(--shadow);padding:4px;min-width:150px}
 #popm button{display:block;width:100%;text-align:left;border:0;background:none;padding:6px 10px;border-radius:4px;font-size:13px}
 #popm button:hover{background:var(--panel2)}
 .nodo-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px;align-items:start}
 .nodo-layout.sin-arbol{grid-template-columns:minmax(0,1fr)}
 .explorador{position:sticky;top:62px;max-height:calc(100vh - 84px);overflow:auto;padding:10px 8px}
-.explorador .exp-head{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 6px 8px;margin-bottom:6px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
-.explorador .exp-head b{color:var(--ink);font-weight:600}
-.explorador .exp-head a{font-size:11.5px;text-decoration:none}
 .explorador .fin{margin-left:auto}
 @media (max-width:900px){.nodo-layout{grid-template-columns:minmax(0,1fr)}.explorador{position:static;max-height:240px}}
 /* designer rows */
@@ -543,6 +545,11 @@ function renderNav(){
  const tg=document.getElementById('menutg');tg.innerHTML=menuPlegado?'<span class="ic">»</span>':'<span class="ic">«</span><span class="lbl">Plegar menú</span>';
  tg.setAttribute('data-tip',menuPlegado?'Despliega el menú lateral con sus textos.':'Reduce el menú lateral a una franja de íconos para dar más espacio a la ficha y al árbol. Pasa el mouse por un ícono para ver qué es. La elección se recuerda en este navegador.');
 }
+const TIP_DESPLEGAR='Despliega todos los niveles del árbol de una vez. Con Alt + clic en el triángulo de un nodo se despliega solo esa rama completa.';
+const TIP_PLEGAR='Pliega todo: queda solo la lista de proyectos raíz. Con Alt + clic en el triángulo de un nodo se pliega solo esa rama.';
+const btnsArbol=cls=>`<button class="${cls}" onclick="A.desplegarTodo()" data-tip="${esc(TIP_DESPLEGAR)}" aria-label="Desplegar todo">⊞</button><button class="${cls}" onclick="A.plegarTodo()" data-tip="${esc(TIP_PLEGAR)}" aria-label="Plegar todo">⊟</button>`;
+/* Cabecera de la tarjeta del árbol: título, desplegar/plegar todo, nuevo raíz y (en el panel) enlace a la vista completa */
+const cabeceraArbol=enPanel=>`<div class="exp-head"><b>Proyectos ${q(TIP.arbolPanel)}</b><span class="exp-acts">${btnsArbol('act')}<button class="act" onclick="A.menuNuevo(event,null)" data-tip="${esc(TIP.arbolNuevo)}">+</button>${enPanel?`<a class="act" href="#/arbol" data-tip="Ver completo: abre el mismo árbol a todo el ancho." aria-label="Ver completo">⤢</a>`:''}</span></div>`;
 const designBtn=(href,txt,tip)=>`<a class="btn design" href="${href}" data-tip="${esc(tip||TIP.btnDisenar)}">⚙ ${txt||'Diseñar esta pantalla'}</a>`;
 const designBar=txt=>`<div class="design-bar"><b data-tip="${esc(TIP.diseñoBar)}">Modo diseño</b><span>${txt} Los cambios se aplican de inmediato y quedan escritos en el JSON de definición. Pasa el mouse por cualquier <span class="q" style="margin:0">?</span> para saber qué es cada cosa.</span></div>`;
 
@@ -553,13 +560,10 @@ const abiertos=new Set(); /* nodos desplegados en el árbol; se conserva mientra
 const tiposRaiz=()=>S.meta.tipos.filter(t=>t.id==='proyecto'||!S.meta.tipos.some(o=>o.hijos.includes(t.id)));
 /* Dibuja el árbol desde pid; actual = id del nodo resaltado (panel lateral) */
 function arbolHtml(pid,actual){const hs=hijos(pid);if(!hs.length)return '';return `<ul ${pid&&!abiertos.has(pid)?'hidden':''}>`+hs.map(n=>{const t=tipo(n.tipo);const fe=campoDe(n.tipo,'estado');const c=hijos(n.id).length;const o=fe&&n.datos.estado?etiquetaOpcion(fe,n.datos.estado):null;
-  return `<li><div class="row ${n.id===actual?'cur':''}"><span class="tg" ${c?`onclick="A.plegar(this,'${n.id}')" style="cursor:pointer" data-tip="Pliega o despliega los internos de este nodo. Por defecto todo está plegado. Este triángulo es fijo del sistema (parte de la vista de árbol); no se define en ninguna pantalla."`:''}>${c?(abiertos.has(n.id)?'▾':'▸'):''}</span><a href="#/nodo/${n.id}" data-tip="${esc((t?.nombre||n.tipo)+' · '+n.codigo)}">${esc(n.nombre)}</a><span class="fin">${o?`<i class="dot" style="background:${esc(o.color||'var(--muted)')}" data-tip="${esc(o.etiqueta)}"></i>`:''}${c?`<span class="cnt" data-tip="${esc(TIP.internos)}">${c}</span>`:''}</span><span class="acts">${t?.hijos?.length?`<button class="act" onclick="A.menuNuevo(event,'${n.id}')" data-tip="${esc(TIP.nuevoInterno)}">+</button>`:''}<button class="act del" onclick="event.stopPropagation();A.borrarNodo('${n.id}')" data-tip="${esc(TIP.eliminar)}">×</button></span></div>${arbolHtml(n.id,actual)}</li>`}).join('')+'</ul>'}
+  return `<li><div class="row ${n.id===actual?'cur':''}"><span class="tg" ${c?`onclick="A.plegar(this,'${n.id}',event)" style="cursor:pointer" data-tip="Pliega o despliega los internos de este nodo. Con Alt + clic se despliega o pliega la rama completa. Por defecto todo está plegado. Este triángulo es fijo del sistema (parte de la vista de árbol); no se define en ninguna pantalla."`:''}>${c?(abiertos.has(n.id)?'▾':'▸'):''}</span><a href="#/nodo/${n.id}" data-tip="${esc((t?.nombre||n.tipo)+' · '+n.codigo)}">${esc(n.nombre)}</a><span class="fin">${o?`<i class="dot" style="background:${esc(o.color||'var(--muted)')}" data-tip="${esc(o.etiqueta)}"></i>`:''}${c?`<span class="cnt" data-tip="${esc(TIP.internos)}">${c}</span>`:''}</span><span class="acts">${t?.hijos?.length?`<button class="act" onclick="A.menuNuevo(event,'${n.id}')" data-tip="${esc(TIP.nuevoInterno)}">+</button>`:''}<button class="act del" onclick="event.stopPropagation();A.borrarNodo('${n.id}')" data-tip="${esc(TIP.eliminar)}">×</button></span></div>${arbolHtml(n.id,actual)}</li>`}).join('')+'</ul>'}
 function vArbol(){
  setTop(`<span class="cur">Proyectos</span>`,designBtn('#/tipos','Diseñar tipos y jerarquía',TIP.arbolTipos));
- const raiz=tiposRaiz();
- view(`<div class="page-head" style="justify-content:flex-end">
-  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" onclick="A.desplegarTodo()" data-tip="Despliega todos los niveles del árbol de una vez.">Desplegar todo</button><button class="btn" onclick="A.plegarTodo()" data-tip="Pliega todo: queda solo la lista de proyectos raíz.">Plegar todo</button>${raiz.map(t=>`<button class="btn pri" onclick="A.nuevoNodo(null,'${t.id}')" data-tip="${esc(TIP.arbolNuevo)}">+ Nuevo ${esc(t.nombre.toLowerCase())}</button>`).join(' ')}</div></div>
-  <div class="card tree">${arbolHtml(null)||'<div class="empty">Aún no hay proyectos.</div>'}</div>`);
+ view(`<div class="card tree">${cabeceraArbol(false)}${arbolHtml(null)||'<div class="empty">Aún no hay proyectos.</div>'}</div>`);
 }
 
 /* ============ vista: nodo ============ */
@@ -593,7 +597,7 @@ function vNodo(id,tab){
   const hs=S.datos.historial.filter(h=>h.nodoId===id);
   body=`<div class="card hist"><h2>Cambios registrados ${q(TIP.tabHistorial)}</h2>${hs.length?`<div class="tbl-wrap"><table><thead><tr><th>Cuándo</th><th>Campo ${q('Etiqueta actual del campo que cambió. Se busca por su clave interna, así que aunque renombres el campo el historial sigue mostrándolo bien.')}</th><th>Antes</th><th>Después</th></tr></thead><tbody>${hs.map(h=>`<tr><td class="t">${esc(h.fecha)}</td><td>${esc(campoDe(n.tipo,h.campo)?.label||h.campo)}</td><td>${esc(h.antes)}</td><td>${esc(h.despues)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin cambios registrados.</div>'}</div>`;
  }
- const panel=arbolVisible?`<aside class="card tree explorador"><div class="exp-head"><b>Proyectos ${q(TIP.arbolPanel)}</b><span style="display:flex;gap:6px;align-items:center"><button class="act" onclick="A.menuNuevo(event,null)" data-tip="${esc(TIP.arbolNuevo)}">+</button><a href="#/arbol" data-tip="Abre el mismo árbol a todo el ancho, con los botones para crear proyectos y desplegar o plegar todo.">Ver completo</a></span></div>${arbolHtml(null,id)}</aside>`:'';
+ const panel=arbolVisible?`<aside class="card tree explorador">${cabeceraArbol(true)}${arbolHtml(null,id)}</aside>`:'';
  view(`<div class="nodo-layout ${arbolVisible?'':'sin-arbol'}">${panel}<div class="nodo-main"><div class="page-head"><div><h1>${esc(n.nombre)} <button class="btn ghost sm" onclick="A.renombrar('${id}')" data-tip="${esc(TIP.renombrar)}">✎</button></h1><div class="meta"><span class="badge" data-tip="${esc(TIP.tipoNodo)}">${esc(t.nombre)}</span> <span class="code" data-tip="${esc(TIP.codigo)}">${esc(n.codigo)}</span> · <span data-tip="${esc(TIP.creado)}">creado ${esc(n.creado)}</span></div></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">${t.hijos.map(ht=>tipo(ht)).filter(Boolean).map(th=>`<button class="btn" onclick="A.nuevoNodo('${id}','${th.id}')" data-tip="${esc(TIP.nuevoInterno)}">+ Nueva ${esc(th.nombre.toLowerCase())}</button>`).join('')}<button class="btn danger" onclick="A.borrarNodo('${id}')" data-tip="${esc(TIP.eliminar)}">Eliminar</button></div></div><div class="tabs">${tabs}</div>${body}</div></div>`);
  document.querySelector('.explorador .row.cur')?.scrollIntoView({block:'nearest'});
@@ -820,7 +824,8 @@ function refresh(){route()}
 const A={
  reset(){if(confirm('¿Volver a los datos y definiciones iniciales del demo?')){S=seed();save();location.hash='#/arbol';refresh();toast('Demo restablecido')}},
  copiar(txt,msg){navigator.clipboard?.writeText(txt).then(()=>toast(msg)).catch(()=>toast('No se pudo copiar'))},
- plegar(el,id){const ul=el.closest('li').querySelector(':scope > ul');if(!ul)return;ul.hidden=!ul.hidden;el.textContent=ul.hidden?'▸':'▾';if(ul.hidden)abiertos.delete(id);else abiertos.add(id)},
+ plegar(el,id,ev){if(ev&&ev.altKey){const ids=[id,...desc(id).filter(x=>hijos(x.id).length).map(x=>x.id)];if(abiertos.has(id))ids.forEach(x=>abiertos.delete(x));else ids.forEach(x=>abiertos.add(x));refresh();return}
+  const ul=el.closest('li').querySelector(':scope > ul');if(!ul)return;ul.hidden=!ul.hidden;el.textContent=ul.hidden?'▸':'▾';if(ul.hidden)abiertos.delete(id);else abiertos.add(id)},
  desplegarTodo(){S.datos.nodos.forEach(n=>{if(hijos(n.id).length)abiertos.add(n.id)});refresh()},
  plegarTodo(){abiertos.clear();refresh()},
  menuToggle(){menuPlegado=!menuPlegado;try{localStorage.setItem(LS+'-menu',menuPlegado?'1':'0')}catch(e){}renderNav();hideTip()},
