@@ -1,0 +1,582 @@
+<title>SisPla Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F1F3F5; --panel:#FFFFFF; --panel2:#F7F8FA; --ink:#1B232D; --muted:#66707C; --line:#D5DBE1;
+  --accent:#2E5C8A; --accent-ink:#FFFFFF; --accent-soft:#E3ECF5;
+  --design:#A5661A; --design-ink:#FFFFFF; --design-soft:#FBF0DF;
+  --side:#1A2530; --side-ink:#C9D3DD; --side-muted:#7C8B99; --side-active:#2E5C8A;
+  --ok:#2E7D5B; --bad:#B23A3A; --shadow:0 1px 2px rgba(20,30,40,.06),0 4px 14px rgba(20,30,40,.05);
+  --sans:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12171D; --panel:#1B222A; --panel2:#212932; --ink:#E3E8ED; --muted:#93A0AD; --line:#2E3842;
+  --accent:#7FADDC; --accent-ink:#0E1A26; --accent-soft:#233748;
+  --design:#E2A857; --design-ink:#1F1608; --design-soft:#3B2D18;
+  --side:#0D1218; --side-ink:#C2CCD6; --side-muted:#6F7E8C; --side-active:#2E5C8A;
+  --ok:#5FB58D; --bad:#E07373; --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --bg:#12171D; --panel:#1B222A; --panel2:#212932; --ink:#E3E8ED; --muted:#93A0AD; --line:#2E3842;
+  --accent:#7FADDC; --accent-ink:#0E1A26; --accent-soft:#233748;
+  --design:#E2A857; --design-ink:#1F1608; --design-soft:#3B2D18;
+  --side:#0D1218; --side-ink:#C2CCD6; --side-muted:#6F7E8C; --side-active:#2E5C8A;
+  --ok:#5FB58D; --bad:#E07373; --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45}
+a{color:var(--accent)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+aside{background:var(--side);color:var(--side-ink);display:flex;flex-direction:column;padding-block:18px;padding-inline:0}
+.brand{padding:0 18px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+.brand b{font-size:17px;letter-spacing:.02em;display:block}
+.brand span{font-size:11.5px;color:var(--side-muted);text-transform:uppercase;letter-spacing:.08em}
+nav{padding:10px 8px;display:flex;flex-direction:column;gap:2px;flex:1}
+nav a{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;color:var(--side-ink);text-decoration:none;font-size:13.5px}
+nav a:hover{background:rgba(255,255,255,.06)}
+nav a.on{background:var(--side-active);color:#fff}
+nav a.sub{padding-left:28px;font-size:13px}
+nav .grp{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--side-muted);padding:14px 10px 4px}
+nav .ic{width:16px;text-align:center;opacity:.85;font-size:12px}
+.side-foot{padding:10px 18px 0;font-size:11.5px;color:var(--side-muted);border-top:1px solid rgba(255,255,255,.08)}
+.side-foot button{background:none;border:1px solid rgba(255,255,255,.18);color:var(--side-ink);border-radius:5px;padding:4px 8px;font-size:11.5px;margin-top:6px}
+main{min-width:0;display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:10px;padding-inline:24px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+.crumbs{font-size:13px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.crumbs a{color:var(--muted);text-decoration:none}.crumbs a:hover{color:var(--accent)}
+.crumbs .sep{opacity:.5}.crumbs .cur{color:var(--ink);font-weight:500}
+#view{padding-block:22px;padding-inline:24px;max-width:1240px;width:100%}
+h1{font-size:21px;font-weight:600;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font-size:15px;font-weight:600;margin:0 0 10px}
+h3{font-size:13px;font-weight:600;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.page-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+.page-head .meta{color:var(--muted);font-size:13px;margin-top:4px}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:6px 12px;font-size:13px;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.design{background:var(--design);border-color:var(--design);color:var(--design-ink)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--accent)}
+.btn.danger{color:var(--bad)}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,nav a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px;box-shadow:var(--shadow)}
+.stack{display:flex;flex-direction:column;gap:16px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.cols.w{grid-template-columns:3fr 2fr}
+@media (max-width:900px){.cols,.cols.w{grid-template-columns:1fr}}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.tabs a{padding:8px 14px;text-decoration:none;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:500}
+.tabs a.on{color:var(--accent);border-color:var(--accent)}
+.tabs .n{font-size:11px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:0 6px;margin-left:5px;color:var(--muted)}
+.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:4px;background:var(--accent-soft);color:var(--accent);font-weight:500;vertical-align:middle}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:1px 8px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);white-space:nowrap}
+.chip i{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--muted)}
+.code{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.design-bar{background:var(--design-soft);border:1px solid var(--design);color:var(--ink);border-radius:8px;padding:10px 14px;margin-bottom:18px;display:flex;gap:10px;align-items:center;font-size:13px}
+.design-bar b{color:var(--design);text-transform:uppercase;letter-spacing:.08em;font-size:11px;white-space:nowrap}
+/* forms */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}
+.fld.full{grid-column:1/-1}
+.fld label{font-size:12.5px;font-weight:500;color:var(--muted)}
+.fld label .req{color:var(--bad)}
+.fld input[type=text],.fld input[type=number],.fld input[type=date],.fld select,.fld textarea{
+  border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:7px 9px;width:100%}
+.fld textarea{min-height:72px;resize:vertical}
+.fld .help{font-size:11.5px;color:var(--muted)}
+.fld .opts{display:flex;gap:12px;flex-wrap:wrap;padding-top:4px}
+.fld .opts label{font-weight:400;color:var(--ink);display:flex;gap:5px;align-items:center;font-size:13px}
+.fld.hidden{display:none}
+@media (max-width:640px){.form-grid{grid-template-columns:1fr}}
+.actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+/* tables */
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500;padding:6px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td a{text-decoration:none;font-weight:500}
+.group-row td{background:var(--panel2);font-weight:600;padding-block:6px}
+/* tree */
+.tree ul{list-style:none;margin:0;padding-left:22px}
+.tree>ul{padding-left:0}
+.tree li{margin:2px 0}
+.tree .row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px}
+.tree .row:hover{background:var(--panel2)}
+.tree .row a{text-decoration:none;color:var(--ink);font-weight:500}
+.tree .tg{width:16px;color:var(--muted);font-size:11px}
+.tree .ic{color:var(--accent);width:16px;text-align:center}
+.tree .cnt{font-size:11.5px;color:var(--muted)}
+/* designer rows */
+.drow{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:start;padding:10px 0;border-bottom:1px solid var(--line)}
+.drow:last-child{border-bottom:0}
+.drow .mv{display:flex;flex-direction:column;gap:2px}
+.drow .mv button{padding:0 6px;font-size:11px;border:1px solid var(--line);background:var(--panel2);border-radius:4px;line-height:18px}
+.drow .body{display:flex;flex-direction:column;gap:6px;min-width:0}
+.drow .line{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.drow input[type=text],.drow select{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:4px 7px;font-size:13px}
+.drow input.lbl{font-weight:500;min-width:200px;flex:1}
+.drow .k{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.drow label.cb{display:flex;gap:4px;align-items:center;font-size:12.5px;color:var(--muted)}
+.drow.off{opacity:.55}
+pre{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:12px;font-family:var(--mono);font-size:12px;overflow-x:auto;margin:0;line-height:1.5}
+.note{font-size:12.5px;color:var(--muted)}
+.list{list-style:none;margin:0;padding:0}
+.list li{padding:8px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center}
+.list li:last-child{border-bottom:0}
+.list a.item{text-decoration:none;font-weight:500;color:var(--ink)}
+.list a.item.on{color:var(--accent)}
+.hist{font-size:13px}.hist .t{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.empty{color:var(--muted);font-style:italic;padding:12px 0}
+#toast{position:fixed;bottom:18px;right:18px;background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:6px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.show{opacity:1}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.sw{width:14px;height:14px;border-radius:3px;border:1px solid var(--line);display:inline-block;vertical-align:middle}
+input[type=color]{width:28px;height:24px;padding:0;border:1px solid var(--line);border-radius:4px;background:none}
+@media (max-width:760px){.app{grid-template-columns:1fr}aside{flex-direction:row;flex-wrap:wrap;padding-block:8px}nav{flex-direction:row;flex-wrap:wrap}nav .grp{width:100%;padding-top:6px}.brand{border:0}.side-foot{border:0}}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+</style>
+
+<div class="app">
+  <aside>
+    <div class="brand"><b>SisPla</b><span>Proyectos multinivel · demo</span></div>
+    <nav id="nav"></nav>
+    <div class="side-foot">Todo lo que ves se genera desde el JSON de definición. Los cambios se guardan en este navegador.<br><button onclick="A.reset()">Restablecer demo</button></div>
+  </aside>
+  <main>
+    <header><div class="crumbs" id="crumbs"></div><div id="topbtn"></div></header>
+    <section id="view"></section>
+  </main>
+</div>
+<div id="toast"></div>
+
+<script>
+/* ============ estado ============ */
+const LS='sispla-demo-v1';
+const uid=()=>'n'+Math.random().toString(36).slice(2,8);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const slug=s=>(String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''))||'campo';
+const hoy=()=>new Date().toISOString().slice(0,10);
+const TIPOS_CAMPO={texto:'Texto',textolargo:'Texto largo',numero:'Número',fecha:'Fecha',lista:'Lista desplegable',radio:'Botones de opción',checkbox:'Casilla (sí/no)',multiple:'Selección múltiple',referencia:'Referencia a otro nodo'};
+const CONFIG_PANTALLAS={formularios:'Pantallas (formularios)',tipos:'Tipos de nodo',catalogos:'Listas de opciones',menu:'Menú',json:'JSON del sistema'};
+
+function seed(){return{
+ meta:{
+  tipos:[
+   {id:'proyecto',nombre:'Proyecto',icono:'▣',formId:'f_proyecto',hijos:['proyecto','etapa'],columnas:['estado','responsable','fecha_fin']},
+   {id:'etapa',nombre:'Etapa',icono:'◆',formId:'f_etapa',hijos:['etapa','tarea'],columnas:['estado','avance','fecha_fin']},
+   {id:'tarea',nombre:'Tarea',icono:'▸',formId:'f_tarea',hijos:[],columnas:['estado','prioridad','responsable','fecha_limite']}
+  ],
+  formularios:{
+   f_proyecto:{id:'f_proyecto',nombre:'Ficha de proyecto',campos:[
+    {key:'cliente',label:'Cliente',tipo:'texto',requerido:true,visible:true,ancho:'half'},
+    {key:'estado',label:'Estado',tipo:'lista',catalogo:'estado',requerido:true,visible:true,ancho:'half'},
+    {key:'responsable',label:'Responsable',tipo:'texto',visible:true,ancho:'half'},
+    {key:'area',label:'Área',tipo:'lista',catalogo:'area',visible:true,ancho:'half'},
+    {key:'fecha_inicio',label:'Fecha de inicio',tipo:'fecha',visible:true,ancho:'half'},
+    {key:'fecha_fin',label:'Fecha de fin prevista',tipo:'fecha',visible:true,ancho:'half'},
+    {key:'presupuesto',label:'Presupuesto (USD)',tipo:'numero',visible:true,ancho:'half'},
+    {key:'tiene_contrato',label:'Tiene contrato firmado',tipo:'checkbox',visible:true,ancho:'half'},
+    {key:'nro_contrato',label:'N° de contrato',tipo:'texto',visible:true,ancho:'half',visibleSi:{campo:'tiene_contrato',valor:'true'},ayuda:'Solo se muestra si hay contrato firmado'},
+    {key:'descripcion',label:'Descripción / alcance',tipo:'textolargo',visible:true,ancho:'full'}
+   ]},
+   f_etapa:{id:'f_etapa',nombre:'Ficha de etapa',campos:[
+    {key:'estado',label:'Estado',tipo:'lista',catalogo:'estado',requerido:true,visible:true,ancho:'half'},
+    {key:'avance',label:'Avance (%)',tipo:'numero',visible:true,ancho:'half'},
+    {key:'fecha_inicio',label:'Inicio',tipo:'fecha',visible:true,ancho:'half'},
+    {key:'fecha_fin',label:'Fin',tipo:'fecha',visible:true,ancho:'half'},
+    {key:'entregables',label:'Entregables esperados',tipo:'multiple',opciones:[{valor:'informe',etiqueta:'Informe'},{valor:'planos',etiqueta:'Planos'},{valor:'acta',etiqueta:'Acta'},{valor:'presupuesto',etiqueta:'Presupuesto'}],visible:true,ancho:'full'},
+    {key:'observaciones',label:'Observaciones',tipo:'textolargo',visible:true,ancho:'full'}
+   ]},
+   f_tarea:{id:'f_tarea',nombre:'Ficha de tarea',campos:[
+    {key:'estado',label:'Estado',tipo:'lista',catalogo:'estado',requerido:true,visible:true,ancho:'half'},
+    {key:'prioridad',label:'Prioridad',tipo:'radio',catalogo:'prioridad',visible:true,ancho:'half'},
+    {key:'responsable',label:'Responsable',tipo:'texto',visible:true,ancho:'half'},
+    {key:'fecha_limite',label:'Fecha límite',tipo:'fecha',visible:true,ancho:'half'},
+    {key:'horas',label:'Horas estimadas',tipo:'numero',visible:true,ancho:'half'},
+    {key:'depende_de',label:'Depende de',tipo:'referencia',refTipo:'tarea',visible:true,ancho:'half'},
+    {key:'notas',label:'Notas',tipo:'textolargo',visible:true,ancho:'full'}
+   ]}
+  },
+  catalogos:{
+   estado:{id:'estado',nombre:'Estados',opciones:[{valor:'planificado',etiqueta:'Planificado',color:'#8A94A0'},{valor:'en_curso',etiqueta:'En curso',color:'#2E5C8A'},{valor:'en_espera',etiqueta:'En espera',color:'#C08A1E'},{valor:'cerrado',etiqueta:'Cerrado',color:'#2E7D5B'}]},
+   prioridad:{id:'prioridad',nombre:'Prioridades',opciones:[{valor:'alta',etiqueta:'Alta',color:'#B23A3A'},{valor:'media',etiqueta:'Media',color:'#C08A1E'},{valor:'baja',etiqueta:'Baja',color:'#8A94A0'}]},
+   area:{id:'area',nombre:'Áreas',opciones:[{valor:'obra_civil',etiqueta:'Obra civil',color:'#6B5B95'},{valor:'electrico',etiqueta:'Eléctrico',color:'#2E5C8A'},{valor:'legal',etiqueta:'Legal',color:'#8A94A0'},{valor:'administrativo',etiqueta:'Administrativo',color:'#2E7D5B'}]}
+  },
+  menu:[
+   {id:'m1',label:'Proyectos',icono:'▣',tipo:'arbol',visible:true},
+   {id:'m2',label:'Todas las tareas',icono:'▸',tipo:'lista',target:'tarea',visible:true},
+   {id:'m3',label:'Reportes',icono:'≡',tipo:'reportes',visible:true},
+   {id:'m4',label:'Tareas por estado',icono:'',tipo:'reporte',target:'r1',visible:true,sub:true},
+   {id:'m5',label:'Configuración',tipo:'grupo',visible:true},
+   {id:'m6',label:'Pantallas',icono:'⊞',tipo:'config',target:'formularios',visible:true},
+   {id:'m7',label:'Tipos de nodo',icono:'⋔',tipo:'config',target:'tipos',visible:true},
+   {id:'m8',label:'Listas de opciones',icono:'☰',tipo:'config',target:'catalogos',visible:true},
+   {id:'m9',label:'Menú',icono:'⇅',tipo:'config',target:'menu',visible:true},
+   {id:'m10',label:'JSON del sistema',icono:'{}',tipo:'config',target:'json',visible:true}
+  ],
+  reportes:[
+   {id:'r1',nombre:'Tareas por estado',tipo:'tarea',alcance:'',campos:['nombre','ruta','prioridad','responsable','fecha_limite','horas'],filtro:{campo:'',valor:''},agrupar:'estado'},
+   {id:'r2',nombre:'Proyectos por área',tipo:'proyecto',alcance:'',campos:['codigo','nombre','cliente','estado','presupuesto'],filtro:{campo:'',valor:''},agrupar:'area'}
+  ]
+ },
+ datos:{
+  nodos:[
+   {id:'p1',tipo:'proyecto',parentId:null,codigo:'PRJ-001',nombre:'Ampliación Planta Norte',creado:'2026-03-02',datos:{cliente:'Industrias Andinas S.A.',estado:'en_curso',responsable:'M. Quispe',area:'obra_civil',fecha_inicio:'2026-03-02',fecha_fin:'2026-12-18',presupuesto:1850000,tiene_contrato:true,nro_contrato:'CT-2026-014',descripcion:'Ampliación de 2.400 m² de nave industrial, incluyendo obras civiles, subestación eléctrica y permisos municipales.'}},
+   {id:'e1',tipo:'etapa',parentId:'p1',codigo:'PRJ-001.1',nombre:'Licitación',creado:'2026-03-02',datos:{estado:'cerrado',avance:100,fecha_inicio:'2026-03-02',fecha_fin:'2026-04-15',entregables:['informe','acta'],observaciones:'Adjudicado a Constructora Sur.'}},
+   {id:'t1',tipo:'tarea',parentId:'e1',codigo:'PRJ-001.1.1',nombre:'Revisar bases de licitación',creado:'2026-03-03',datos:{estado:'cerrado',prioridad:'alta',responsable:'L. Paredes',fecha_limite:'2026-03-14',horas:16}},
+   {id:'t2',tipo:'tarea',parentId:'e1',codigo:'PRJ-001.1.2',nombre:'Consolidar consultas de postores',creado:'2026-03-10',datos:{estado:'cerrado',prioridad:'media',responsable:'L. Paredes',fecha_limite:'2026-03-28',horas:8,depende_de:'t1'}},
+   {id:'e2',tipo:'etapa',parentId:'p1',codigo:'PRJ-001.2',nombre:'Ejecución',creado:'2026-04-20',datos:{estado:'en_curso',avance:35,fecha_inicio:'2026-04-20',fecha_fin:'2026-11-30',entregables:['planos','acta','informe']}},
+   {id:'e3',tipo:'etapa',parentId:'e2',codigo:'PRJ-001.2.1',nombre:'Obras civiles',creado:'2026-04-20',datos:{estado:'en_curso',avance:60,fecha_inicio:'2026-04-20',fecha_fin:'2026-09-30',entregables:['planos']}},
+   {id:'t3',tipo:'tarea',parentId:'e3',codigo:'PRJ-001.2.1.1',nombre:'Vaciado de losa nivel 2',creado:'2026-08-01',datos:{estado:'en_curso',prioridad:'alta',responsable:'R. Huamán',fecha_limite:'2026-09-19',horas:40}},
+   {id:'t4',tipo:'tarea',parentId:'e2',codigo:'PRJ-001.2.2',nombre:'Aprobar planos rev. B',creado:'2026-08-20',datos:{estado:'en_espera',prioridad:'media',responsable:'M. Quispe',fecha_limite:'2026-09-15',horas:6,notas:'Esperando respuesta del cliente sobre observaciones.'}},
+   {id:'p2',tipo:'proyecto',parentId:'p1',codigo:'PRJ-001.3',nombre:'Subestación eléctrica',creado:'2026-06-10',datos:{cliente:'Industrias Andinas S.A.',estado:'planificado',responsable:'A. Torres',area:'electrico',fecha_inicio:'2026-10-01',fecha_fin:'2026-12-10',presupuesto:320000,tiene_contrato:false,descripcion:'Proyecto interno: subestación 10 kV con tablero de distribución.'}},
+   {id:'p3',tipo:'proyecto',parentId:null,codigo:'PRJ-002',nombre:'Auditoría contractual 2026',creado:'2026-08-15',datos:{cliente:'Minera Cóndor',estado:'planificado',responsable:'S. Beltrán',area:'legal',fecha_inicio:'2026-10-05',presupuesto:45000,tiene_contrato:false,descripcion:'Revisión de contratos vigentes y cartas de garantía.'}}
+  ],
+  archivos:[
+   {id:'a1',nodoId:'p1',nombre:'Contrato CT-2026-014 firmado.pdf',clase:'documento',tamano:1843210,fecha:'2026-03-05',origen:'Cliente'},
+   {id:'a2',nodoId:'p1',nombre:'RE: Entrega de planos rev. B.eml',clase:'email',tamano:48210,fecha:'2026-08-21',origen:'Cliente',email:{de:'j.rojas@andinas.pe',para:'m.quispe@sispla.pe',asunto:'RE: Entrega de planos rev. B',fechaEnvio:'2026-08-21'}},
+   {id:'a3',nodoId:'e2',nombre:'Acta de inicio de obra.pdf',clase:'documento',tamano:522000,fecha:'2026-04-20',origen:'Contratista'},
+   {id:'a4',nodoId:'t4',nombre:'Observaciones a planos rev. B.eml',clase:'email',tamano:31000,fecha:'2026-08-28',origen:'Cliente',email:{de:'j.rojas@andinas.pe',para:'m.quispe@sispla.pe',asunto:'Observaciones a planos rev. B',fechaEnvio:'2026-08-28'}}
+  ],
+  historial:[
+   {nodoId:'e2',fecha:'2026-08-30 10:12',campo:'avance',antes:'30',despues:'35'},
+   {nodoId:'t4',fecha:'2026-08-28 16:40',campo:'estado',antes:'En curso',despues:'En espera'},
+   {nodoId:'p1',fecha:'2026-03-05 09:02',campo:'tiene_contrato',antes:'No',despues:'Sí'}
+  ]
+ }
+}}
+let S;
+function load(){try{const r=localStorage.getItem(LS);S=r?JSON.parse(r):seed()}catch(e){S=seed()}}
+function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
+
+/* ============ acceso al modelo ============ */
+const tipo=id=>S.meta.tipos.find(t=>t.id===id);
+const form=id=>S.meta.formularios[id];
+const formDeTipo=tid=>form(tipo(tid)?.formId);
+const nodo=id=>S.datos.nodos.find(n=>n.id===id);
+const hijos=id=>S.datos.nodos.filter(n=>n.parentId===id);
+const ancestros=id=>{const out=[];let n=nodo(id);while(n&&n.parentId){n=nodo(n.parentId);if(n)out.unshift(n)}return out};
+const rutaStr=id=>ancestros(id).map(n=>n.nombre).join(' › ');
+const desc=id=>{const out=[];const rec=p=>hijos(p).forEach(h=>{out.push(h);rec(h.id)});rec(id);return out};
+const archivosDe=id=>S.datos.archivos.filter(a=>a.nodoId===id);
+function opciones(f){if(f.catalogo&&S.meta.catalogos[f.catalogo])return S.meta.catalogos[f.catalogo].opciones;return f.opciones||[]}
+function etiquetaOpcion(f,v){const o=opciones(f).find(o=>o.valor===v);return o?o:{valor:v,etiqueta:v}}
+function campoDe(tid,key){return formDeTipo(tid)?.campos.find(c=>c.key===key)}
+function fmtNum(n){return Number(n).toLocaleString('es-PE')}
+function fmtBytes(b){return b>1e6?(b/1e6).toFixed(1)+' MB':Math.round(b/1e3)+' KB'}
+function chip(f,v){const o=etiquetaOpcion(f,v);return `<span class="chip"><i style="background:${esc(o.color||'var(--muted)')}"></i>${esc(o.etiqueta)}</span>`}
+function mostrarValor(f,v){
+ if(v===undefined||v===null||v==='')return '<span class="note">—</span>';
+ switch(f.tipo){
+  case 'lista':case 'radio':return chip(f,v);
+  case 'multiple':return (Array.isArray(v)?v:[v]).map(x=>chip(f,x)).join(' ');
+  case 'checkbox':return v?'Sí':'No';
+  case 'numero':return fmtNum(v);
+  case 'referencia':{const n=nodo(v);return n?`<a href="#/nodo/${n.id}">${esc(n.nombre)}</a>`:esc(v)}
+  default:return esc(v);
+ }}
+
+/* ============ navegación ============ */
+function route(){
+ const h=location.hash.replace(/^#\/?/,'');const [a,b,c]=h.split('/');
+ const V={ '':vArbol, arbol:vArbol, nodo:()=>vNodo(b,c||'datos'), lista:()=>vLista(b), form:()=>vForm(b), formularios:vFormularios, tipos:vTipos, catalogos:()=>vCatalogos(b), menu:vMenu, reportes:vReportes, reporte:()=>vReporte(b,c), json:()=>vJson(b) };
+ (V[a]||vArbol)();
+ renderNav();
+ window.scrollTo(0,0);
+}
+function setTop(crumbs,btn){document.getElementById('crumbs').innerHTML=crumbs;document.getElementById('topbtn').innerHTML=btn||''}
+function view(html){document.getElementById('view').innerHTML=html}
+function hrefMenu(m){switch(m.tipo){case 'arbol':return '#/arbol';case 'lista':return '#/lista/'+m.target;case 'reportes':return '#/reportes';case 'reporte':return '#/reporte/'+m.target;case 'config':return '#/'+m.target;case 'url':return m.target||'#';default:return '#'}}
+function renderNav(){
+ const cur=location.hash||'#/arbol';
+ document.getElementById('nav').innerHTML=S.meta.menu.filter(m=>m.visible!==false).map(m=>{
+  if(m.tipo==='grupo')return `<div class="grp">${esc(m.label)}</div>`;
+  const h=hrefMenu(m);const on=cur===h||(h==='#/arbol'&&(cur.startsWith('#/nodo')||cur==='#/'));
+  return `<a href="${esc(h)}" class="${on?'on':''} ${m.sub?'sub':''}" ${m.tipo==='url'?'target="_blank" rel="noopener"':''}><span class="ic">${esc(m.icono||'')}</span>${esc(m.label)}</a>`;
+ }).join('');
+}
+const designBtn=(href,txt)=>`<a class="btn design" href="${href}">⚙ ${txt||'Diseñar esta pantalla'}</a>`;
+const designBar=txt=>`<div class="design-bar"><b>Modo diseño</b><span>${txt} Los cambios se aplican de inmediato y quedan escritos en el JSON de definición.</span></div>`;
+
+/* ============ vista: árbol ============ */
+function vArbol(){
+ setTop(`<span class="cur">Proyectos</span>`,designBtn('#/tipos','Diseñar tipos y jerarquía'));
+ const rec=pid=>{const hs=hijos(pid);if(!hs.length)return '';return '<ul>'+hs.map(n=>{const t=tipo(n.tipo);const fe=campoDe(n.tipo,'estado');const c=hijos(n.id).length;
+  return `<li><div class="row"><span class="tg">${c?'▾':''}</span><span class="ic">${esc(t?.icono||'')}</span><a href="#/nodo/${n.id}">${esc(n.nombre)}</a><span class="badge">${esc(t?.nombre||n.tipo)}</span><span class="code">${esc(n.codigo)}</span>${fe&&n.datos.estado?chip(fe,n.datos.estado):''}${c?`<span class="cnt">${c} interno${c>1?'s':''}</span>`:''}</div>${rec(n.id)}</li>`}).join('')+'</ul>'};
+ const raiz=S.meta.tipos.filter(t=>t.id==='proyecto'||!S.meta.tipos.some(o=>o.hijos.includes(t.id)));
+ view(`<div class="page-head"><div><h1>Proyectos</h1><div class="meta">Un proyecto puede contener proyectos, etapas o tareas, sin límite de profundidad. La jerarquía permitida se define en <a href="#/tipos">Tipos de nodo</a>.</div></div>
+  <div>${raiz.map(t=>`<button class="btn pri" onclick="A.nuevoNodo(null,'${t.id}')">+ Nuevo ${esc(t.nombre.toLowerCase())}</button>`).join(' ')}</div></div>
+  <div class="card tree">${rec(null)||'<div class="empty">Aún no hay proyectos.</div>'}</div>`);
+}
+
+/* ============ vista: nodo ============ */
+function vNodo(id,tab){
+ const n=nodo(id);if(!n){location.hash='#/arbol';return}
+ const t=tipo(n.tipo);const f=form(t.formId);
+ const crumbs=`<a href="#/arbol">Proyectos</a>`+ancestros(id).map(a=>`<span class="sep">›</span><a href="#/nodo/${a.id}">${esc(a.nombre)}</a>`).join('')+`<span class="sep">›</span><span class="cur">${esc(n.nombre)}</span>`;
+ setTop(crumbs,designBtn('#/form/'+t.formId));
+ const nh=hijos(id).length,na=archivosDe(id).length,nhi=S.datos.historial.filter(h=>h.nodoId===id).length;
+ const tabs=[['datos','Datos',''],['hijos','Internos',nh],['archivos','Archivos',na],['historial','Historial',nhi]].map(([k,l,c])=>`<a href="#/nodo/${id}/${k}" class="${tab===k?'on':''}">${l}${c!==''?`<span class="n">${c}</span>`:''}</a>`).join('');
+ let body='';
+ if(tab==='datos'){
+  body=`<div class="card"><h2>${esc(f.nombre)}</h2>${renderForm(f,n.datos)}<div class="actions"><button class="btn" onclick="location.hash='#/arbol'">Cancelar</button><button class="btn pri" onclick="A.guardarNodo('${id}')">Guardar</button></div></div>`;
+ }else if(tab==='hijos'){
+  const secs=t.hijos.map(ht=>{const th=tipo(ht);if(!th)return '';const hs=hijos(id).filter(x=>x.tipo===ht);const cols=(th.columnas||[]).map(k=>campoDe(ht,k)).filter(Boolean);
+   return `<div class="card"><div class="page-head" style="margin-bottom:10px"><h2>${esc(th.nombre)}s internos</h2><button class="btn sm pri" onclick="A.nuevoNodo('${id}','${ht}')">+ Nueva ${esc(th.nombre.toLowerCase())}</button></div>
+   ${hs.length?`<div class="tbl-wrap"><table><thead><tr><th>Código</th><th>Nombre</th>${cols.map(c=>`<th class="${c.tipo==='numero'?'num':''}">${esc(c.label)}</th>`).join('')}<th>Internos</th></tr></thead><tbody>${hs.map(h=>`<tr><td class="code">${esc(h.codigo)}</td><td><a href="#/nodo/${h.id}">${esc(h.nombre)}</a></td>${cols.map(c=>`<td class="${c.tipo==='numero'?'num':''}">${mostrarValor(c,h.datos[c.key])}</td>`).join('')}<td class="num">${hijos(h.id).length||''}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin registros.</div>'}
+   <div class="note" style="margin-top:8px">Las columnas de este listado se definen en <a href="#/tipos">Tipos de nodo › ${esc(th.nombre)}</a>.</div></div>`}).join('');
+  body=`<div class="stack">${secs||'<div class="card empty">Este tipo de nodo no admite internos. Puedes cambiarlo en <a href="#/tipos">Tipos de nodo</a>.</div>'}</div>`;
+ }else if(tab==='archivos'){
+  const as=archivosDe(id);
+  body=`<div class="stack"><div class="card"><h2>Constancias adjuntas</h2>${as.length?`<div class="tbl-wrap"><table><thead><tr><th>Archivo</th><th>Clase</th><th>Detalle</th><th>Origen</th><th>Fecha</th><th class="num">Tamaño</th><th></th></tr></thead><tbody>${as.map(a=>`<tr><td><a href="#" onclick="return false">${esc(a.nombre)}</a></td><td>${a.clase==='email'?'<span class="badge">Email</span>':'<span class="badge">Documento</span>'}</td><td class="note">${a.email?`${esc(a.email.de)} → ${esc(a.email.para)}<br>${esc(a.email.asunto)}`:''}</td><td>${esc(a.origen||'')}</td><td>${esc(a.fecha)}</td><td class="num">${fmtBytes(a.tamano)}</td><td><button class="btn sm danger" onclick="A.borrarArchivo('${a.id}')">Quitar</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin archivos registrados.</div>'}</div>
+  <div class="card"><h2>Registrar constancia</h2><div class="form-grid">
+   <div class="fld full"><label for="up_file">Archivo</label><input type="file" id="up_file" onchange="A.upName(this)"><div class="help">En el demo no se sube nada: solo se registra nombre y tamaño.</div></div>
+   <div class="fld half"><label for="up_nombre">Nombre</label><input type="text" id="up_nombre"></div>
+   <div class="fld half"><label for="up_clase">Clase</label><select id="up_clase" onchange="A.upClase(this.value)"><option value="documento">Documento</option><option value="email">Email</option></select></div>
+   <div class="fld half"><label for="up_origen">Entregado por</label><input type="text" id="up_origen" placeholder="Cliente, contratista, supervisión…"></div>
+   <div class="fld half"><label for="up_fecha">Fecha de recepción</label><input type="date" id="up_fecha" value="${hoy()}"></div>
+   <div class="fld half em hidden"><label for="up_de">De</label><input type="text" id="up_de"></div>
+   <div class="fld half em hidden"><label for="up_para">Para</label><input type="text" id="up_para"></div>
+   <div class="fld full em hidden"><label for="up_asunto">Asunto</label><input type="text" id="up_asunto"></div>
+  </div><div class="actions"><button class="btn pri" onclick="A.registrarArchivo('${id}')">Guardar constancia</button></div></div></div>`;
+ }else{
+  const hs=S.datos.historial.filter(h=>h.nodoId===id);
+  body=`<div class="card hist"><h2>Cambios registrados</h2>${hs.length?`<div class="tbl-wrap"><table><thead><tr><th>Cuándo</th><th>Campo</th><th>Antes</th><th>Después</th></tr></thead><tbody>${hs.map(h=>`<tr><td class="t">${esc(h.fecha)}</td><td>${esc(campoDe(n.tipo,h.campo)?.label||h.campo)}</td><td>${esc(h.antes)}</td><td>${esc(h.despues)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin cambios registrados.</div>'}</div>`;
+ }
+ view(`<div class="page-head"><div><h1>${esc(n.nombre)} <button class="btn ghost sm" onclick="A.renombrar('${id}')" title="Renombrar">✎</button></h1><div class="meta"><span class="badge">${esc(t.nombre)}</span> <span class="code">${esc(n.codigo)}</span> · creado ${esc(n.creado)}</div></div>
+  <div><button class="btn danger" onclick="A.borrarNodo('${id}')">Eliminar</button></div></div><div class="tabs">${tabs}</div>${body}`);
+ if(tab==='datos')aplicarCondiciones(f);
+}
+
+/* ============ formulario dinámico ============ */
+function renderForm(f,data,pre='c_'){
+ return `<div class="form-grid" id="dynform">`+f.campos.filter(c=>c.visible!==false).map(c=>{
+  const id=pre+c.key,v=data[c.key];let ctl='';
+  const at=`id="${id}" name="${c.key}"`;
+  switch(c.tipo){
+   case 'textolargo':ctl=`<textarea ${at}>${esc(v)}</textarea>`;break;
+   case 'numero':ctl=`<input type="number" ${at} value="${esc(v)}">`;break;
+   case 'fecha':ctl=`<input type="date" ${at} value="${esc(v)}">`;break;
+   case 'lista':ctl=`<select ${at}><option value="">— elegir —</option>${opciones(c).map(o=>`<option value="${esc(o.valor)}" ${o.valor===v?'selected':''}>${esc(o.etiqueta)}</option>`).join('')}</select>`;break;
+   case 'radio':ctl=`<div class="opts">${opciones(c).map((o,i)=>`<label><input type="radio" name="${c.key}" id="${id}_${i}" value="${esc(o.valor)}" ${o.valor===v?'checked':''}>${esc(o.etiqueta)}</label>`).join('')}</div>`;break;
+   case 'multiple':{const arr=Array.isArray(v)?v:[];ctl=`<div class="opts">${opciones(c).map((o,i)=>`<label><input type="checkbox" name="${c.key}" id="${id}_${i}" value="${esc(o.valor)}" ${arr.includes(o.valor)?'checked':''}>${esc(o.etiqueta)}</label>`).join('')}</div>`;break}
+   case 'checkbox':ctl=`<div class="opts"><label><input type="checkbox" ${at} ${v?'checked':''}>Sí</label></div>`;break;
+   case 'referencia':{const ns=S.datos.nodos.filter(n=>!c.refTipo||n.tipo===c.refTipo);ctl=`<select ${at}><option value="">— ninguno —</option>${ns.map(n=>`<option value="${n.id}" ${n.id===v?'selected':''}>${esc(n.codigo)} · ${esc(n.nombre)}</option>`).join('')}</select>`;break}
+   default:ctl=`<input type="text" ${at} value="${esc(v)}">`;
+  }
+  return `<div class="fld ${c.ancho==='full'?'full':'half'}" data-key="${c.key}"><label for="${id}">${esc(c.label)}${c.requerido?' <span class="req">*</span>':''}</label>${ctl}${c.ayuda?`<div class="help">${esc(c.ayuda)}</div>`:''}</div>`;
+ }).join('')+`</div>`;
+}
+function leerForm(f){
+ const root=document.getElementById('dynform');if(!root)return {};const out={};
+ f.campos.filter(c=>c.visible!==false).forEach(c=>{
+  if(c.tipo==='radio'){const r=root.querySelector(`input[name="${c.key}"]:checked`);out[c.key]=r?r.value:''}
+  else if(c.tipo==='multiple'){out[c.key]=[...root.querySelectorAll(`input[name="${c.key}"]:checked`)].map(i=>i.value)}
+  else if(c.tipo==='checkbox'){out[c.key]=!!root.querySelector(`[name="${c.key}"]`)?.checked}
+  else if(c.tipo==='numero'){const v=root.querySelector(`[name="${c.key}"]`)?.value;out[c.key]=v===''?'':Number(v)}
+  else out[c.key]=root.querySelector(`[name="${c.key}"]`)?.value??'';
+ });return out;
+}
+function aplicarCondiciones(f){
+ const root=document.getElementById('dynform');if(!root)return;
+ const ev=()=>{const vals=leerForm(f);f.campos.forEach(c=>{if(!c.visibleSi||!c.visibleSi.campo)return;const el=root.querySelector(`.fld[data-key="${c.key}"]`);if(!el)return;const v=vals[c.visibleSi.campo];const ok=String(Array.isArray(v)?v.includes(c.visibleSi.valor):v)===String(c.visibleSi.valor);el.classList.toggle('hidden',!ok)})};
+ root.addEventListener('input',ev);root.addEventListener('change',ev);ev();
+}
+
+/* ============ vista: lista por tipo ============ */
+function vLista(tid){
+ const t=tipo(tid);if(!t){location.hash='#/arbol';return}
+ setTop(`<span class="cur">${esc(t.nombre)}s</span>`,designBtn('#/form/'+t.formId));
+ const cols=(t.columnas||[]).map(k=>campoDe(tid,k)).filter(Boolean);const ns=S.datos.nodos.filter(n=>n.tipo===tid);
+ view(`<div class="page-head"><div><h1>Todas las ${esc(t.nombre.toLowerCase())}s</h1><div class="meta">${ns.length} registros en cualquier nivel del árbol.</div></div></div>
+ <div class="card tbl-wrap"><table><thead><tr><th>Código</th><th>Nombre</th><th>Ubicación</th>${cols.map(c=>`<th class="${c.tipo==='numero'?'num':''}">${esc(c.label)}</th>`).join('')}</tr></thead><tbody>${ns.map(n=>`<tr><td class="code">${esc(n.codigo)}</td><td><a href="#/nodo/${n.id}">${esc(n.nombre)}</a></td><td class="note">${esc(rutaStr(n.id))}</td>${cols.map(c=>`<td class="${c.tipo==='numero'?'num':''}">${mostrarValor(c,n.datos[c.key])}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="9" class="empty">Sin registros.</td></tr>'}</tbody></table></div>`);
+}
+
+/* ============ diseño: formularios ============ */
+function vFormularios(){
+ setTop(`<span class="cur">Pantallas</span>`);
+ view(designBar('Cada pantalla es un formulario definido por sus campos. Un tipo de nodo apunta a una de estas pantallas.')+`<div class="page-head"><h1>Pantallas</h1><button class="btn pri" onclick="A.nuevoForm()">+ Nueva pantalla</button></div>
+ <div class="card"><ul class="list">${Object.values(S.meta.formularios).map(f=>`<li><div><a class="item" href="#/form/${f.id}">${esc(f.nombre)}</a> <span class="code">${f.id}</span><div class="note">${f.campos.length} campos · usada por: ${S.meta.tipos.filter(t=>t.formId===f.id).map(t=>esc(t.nombre)).join(', ')||'<i>nadie</i>'}</div></div><a class="btn sm design" href="#/form/${f.id}">Diseñar</a></li>`).join('')}</ul></div>`);
+}
+function vForm(fid){
+ const f=form(fid);if(!f){location.hash='#/formularios';return}
+ const usa=S.meta.tipos.filter(t=>t.formId===fid);const ejemplo=S.datos.nodos.find(n=>usa.some(t=>t.id===n.tipo));
+ setTop(`<a href="#/formularios">Pantallas</a><span class="sep">›</span><span class="cur">${esc(f.nombre)}</span>`,ejemplo?`<a class="btn" href="#/nodo/${ejemplo.id}">← Volver a usar la pantalla</a>`:'');
+ const keys=f.campos.map(c=>c.key);
+ const rows=f.campos.map((c,i)=>`<div class="drow ${c.visible===false?'off':''}"><div class="mv"><button onclick="A.fMov('${fid}',${i},-1)" title="Subir">▲</button><button onclick="A.fMov('${fid}',${i},1)" title="Bajar">▼</button></div>
+  <div class="body"><div class="line"><input type="text" class="lbl" id="fl_${c.key}" value="${esc(c.label)}" oninput="A.fSet('${fid}',${i},'label',this.value)" aria-label="Etiqueta"><span class="k">${c.key}</span>
+   <select id="ft_${c.key}" onchange="A.fSet('${fid}',${i},'tipo',this.value,true)" aria-label="Tipo de campo">${Object.entries(TIPOS_CAMPO).map(([k,v])=>`<option value="${k}" ${c.tipo===k?'selected':''}>${v}</option>`).join('')}</select>
+   <select id="fw_${c.key}" onchange="A.fSet('${fid}',${i},'ancho',this.value)" aria-label="Ancho"><option value="half" ${c.ancho!=='full'?'selected':''}>Media fila</option><option value="full" ${c.ancho==='full'?'selected':''}>Fila completa</option></select>
+   <label class="cb"><input type="checkbox" id="fr_${c.key}" ${c.requerido?'checked':''} onchange="A.fSet('${fid}',${i},'requerido',this.checked)">Requerido</label>
+   <label class="cb"><input type="checkbox" id="fv_${c.key}" ${c.visible!==false?'checked':''} onchange="A.fSet('${fid}',${i},'visible',this.checked,true)">Visible</label></div>
+   ${['lista','radio','multiple'].includes(c.tipo)?`<div class="line"><span class="note">Opciones:</span><select id="fo_${c.key}" onchange="A.fOrigen('${fid}',${i},this.value)"><option value="" ${!c.catalogo?'selected':''}>Propias de este campo</option>${Object.values(S.meta.catalogos).map(k=>`<option value="${k.id}" ${c.catalogo===k.id?'selected':''}>Lista: ${esc(k.nombre)}</option>`).join('')}</select>${c.catalogo?`<a class="btn sm" href="#/catalogos/${c.catalogo}">Editar lista</a>`:`<input type="text" id="fi_${c.key}" style="flex:1;min-width:220px" value="${esc((c.opciones||[]).map(o=>o.etiqueta).join('; '))}" placeholder="Opción 1; Opción 2; Opción 3" oninput="A.fInline('${fid}',${i},this.value)">`}</div>`:''}
+   ${c.tipo==='referencia'?`<div class="line"><span class="note">Apunta a nodos de tipo:</span><select id="fx_${c.key}" onchange="A.fSet('${fid}',${i},'refTipo',this.value)"><option value="">Cualquiera</option>${S.meta.tipos.map(t=>`<option value="${t.id}" ${c.refTipo===t.id?'selected':''}>${esc(t.nombre)}</option>`).join('')}</select></div>`:''}
+   <div class="line"><span class="note">Mostrar solo si</span><select id="fc_${c.key}" onchange="A.fCond('${fid}',${i},'campo',this.value)"><option value="">(siempre)</option>${keys.filter(k=>k!==c.key).map(k=>`<option value="${k}" ${c.visibleSi?.campo===k?'selected':''}>${esc(f.campos.find(x=>x.key===k).label)}</option>`).join('')}</select>${c.visibleSi?.campo?`<span class="note">=</span><input type="text" id="fcv_${c.key}" value="${esc(c.visibleSi.valor)}" placeholder="valor (true, en_curso…)" oninput="A.fCond('${fid}',${i},'valor',this.value)">`:''}
+   <input type="text" id="fh_${c.key}" style="flex:1;min-width:160px" value="${esc(c.ayuda||'')}" placeholder="Texto de ayuda (opcional)" oninput="A.fSet('${fid}',${i},'ayuda',this.value)"></div></div>
+  <button class="btn sm danger" onclick="A.fDel('${fid}',${i})">Quitar</button></div>`).join('');
+ view(designBar(`Estás definiendo la pantalla <b style="color:var(--ink);text-transform:none;letter-spacing:0">${esc(f.nombre)}</b>.`)+`<div class="page-head"><div><h1><input type="text" id="fname" value="${esc(f.nombre)}" oninput="A.fNombre('${fid}',this.value)" style="font:inherit;border:0;border-bottom:1px dashed var(--line);background:none;color:inherit;width:100%"></h1><div class="meta">Usada por: ${usa.map(t=>esc(t.nombre)).join(', ')||'ningún tipo todavía'} · ${f.campos.length} campos</div></div><button class="btn pri" onclick="A.fAdd('${fid}')">+ Agregar campo</button></div>
+ <div class="cols w"><div class="card"><h3>Campos</h3>${rows||'<div class="empty">Pantalla vacía. Agrega el primer campo frente al cliente.</div>'}</div>
+ <div class="card"><h3>Vista previa</h3><div class="note" style="margin-bottom:10px">${ejemplo?`Con los datos de <a href="#/nodo/${ejemplo.id}">${esc(ejemplo.nombre)}</a>`:'Sin datos de ejemplo'}</div><div id="preview">${renderForm(f,ejemplo?ejemplo.datos:{},'pv_')}</div></div></div>`);
+ aplicarCondiciones(f);
+}
+function refreshPreview(fid){const f=form(fid);const usa=S.meta.tipos.filter(t=>t.formId===fid);const ej=S.datos.nodos.find(n=>usa.some(t=>t.id===n.tipo));const p=document.getElementById('preview');if(p){p.innerHTML=renderForm(f,ej?ej.datos:{},'pv_');aplicarCondiciones(f)}}
+
+/* ============ diseño: tipos ============ */
+function vTipos(){
+ setTop(`<span class="cur">Tipos de nodo</span>`,`<a class="btn" href="#/arbol">← Ver el árbol</a>`);
+ view(designBar('Los tipos definen qué es cada nivel del árbol, qué pantalla usa y qué puede contener.')+`<div class="page-head"><h1>Tipos de nodo</h1><button class="btn pri" onclick="A.nuevoTipo()">+ Nuevo tipo</button></div><div class="stack">`+
+ S.meta.tipos.map((t,i)=>{const f=form(t.formId);const cnt=S.datos.nodos.filter(n=>n.tipo===t.id).length;
+  return `<div class="card"><div class="page-head" style="margin-bottom:12px"><div class="line" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><input type="text" id="ti_${t.id}" value="${esc(t.icono)}" style="width:44px;text-align:center" oninput="A.tSet(${i},'icono',this.value)" aria-label="Ícono"><input type="text" id="tn_${t.id}" value="${esc(t.nombre)}" style="font-weight:600;font-size:16px" oninput="A.tSet(${i},'nombre',this.value)" aria-label="Nombre del tipo"><span class="code">${t.id}</span><span class="note">${cnt} registros</span></div>${cnt?'':`<button class="btn sm danger" onclick="A.tDel(${i})">Quitar tipo</button>`}</div>
+  <div class="form-grid"><div class="fld half"><label for="tf_${t.id}">Pantalla que usa</label><div class="line" style="display:flex;gap:8px"><select id="tf_${t.id}" onchange="A.tSet(${i},'formId',this.value,true)">${Object.values(S.meta.formularios).map(x=>`<option value="${x.id}" ${x.id===t.formId?'selected':''}>${esc(x.nombre)}</option>`).join('')}</select><a class="btn sm design" href="#/form/${t.formId}">Diseñar</a></div></div>
+  <div class="fld half"><label>Puede contener</label><div class="opts">${S.meta.tipos.map(o=>`<label><input type="checkbox" id="th_${t.id}_${o.id}" ${t.hijos.includes(o.id)?'checked':''} onchange="A.tHijo(${i},'${o.id}',this.checked)">${esc(o.nombre)}</label>`).join('')}</div></div>
+  <div class="fld full"><label>Columnas en los listados</label><div class="opts">${(f?f.campos:[]).map(c=>`<label><input type="checkbox" id="tc_${t.id}_${c.key}" ${(t.columnas||[]).includes(c.key)?'checked':''} onchange="A.tCol(${i},'${c.key}',this.checked)">${esc(c.label)}</label>`).join('')||'<span class="note">La pantalla no tiene campos.</span>'}</div></div></div></div>`}).join('')+`</div>`);
+}
+
+/* ============ diseño: catálogos ============ */
+function vCatalogos(sel){
+ const cats=Object.values(S.meta.catalogos);const c=S.meta.catalogos[sel]||cats[0];
+ setTop(`<span class="cur">Listas de opciones</span>`);
+ const usos=c?Object.values(S.meta.formularios).flatMap(f=>f.campos.filter(x=>x.catalogo===c.id).map(x=>`${esc(f.nombre)} › ${esc(x.label)}`)):[];
+ view(designBar('Una lista de opciones se define una vez y la pueden usar varios campos de varias pantallas.')+`<div class="page-head"><h1>Listas de opciones</h1><button class="btn pri" onclick="A.nuevoCat()">+ Nueva lista</button></div>
+ <div class="cols" style="grid-template-columns:260px 1fr"><div class="card"><ul class="list">${cats.map(k=>`<li><a class="item ${c&&k.id===c.id?'on':''}" href="#/catalogos/${k.id}">${esc(k.nombre)}</a><span class="note">${k.opciones.length}</span></li>`).join('')}</ul></div>
+ ${c?`<div class="card"><div class="page-head" style="margin-bottom:8px"><div><h2><input type="text" id="cn_${c.id}" value="${esc(c.nombre)}" oninput="A.cNombre('${c.id}',this.value)" style="font:inherit;border:0;border-bottom:1px dashed var(--line);background:none;color:inherit"></h2><div class="note">Usada en: ${usos.join(' · ')||'<i>ningún campo</i>'}</div></div><button class="btn sm" onclick="A.cAdd('${c.id}')">+ Opción</button></div>
+ ${c.opciones.map((o,i)=>`<div class="drow"><div class="mv"><button onclick="A.cMov('${c.id}',${i},-1)">▲</button><button onclick="A.cMov('${c.id}',${i},1)">▼</button></div><div class="body"><div class="line"><input type="text" id="ce_${c.id}_${i}" value="${esc(o.etiqueta)}" class="lbl" oninput="A.cSet('${c.id}',${i},'etiqueta',this.value)" aria-label="Etiqueta"><span class="k">${esc(o.valor)}</span><input type="color" id="cc_${c.id}_${i}" value="${esc(o.color||'#8A94A0')}" oninput="A.cSet('${c.id}',${i},'color',this.value)" aria-label="Color"></div></div><button class="btn sm danger" onclick="A.cDel('${c.id}',${i})">Quitar</button></div>`).join('')}</div>`:'<div class="card empty">No hay listas.</div>'}</div>`);
+}
+
+/* ============ diseño: menú ============ */
+function vMenu(){
+ setTop(`<span class="cur">Menú</span>`);
+ const targets=m=>{switch(m.tipo){case 'lista':return S.meta.tipos.map(t=>`<option value="${t.id}" ${m.target===t.id?'selected':''}>${esc(t.nombre)}s</option>`).join('');case 'reporte':return S.meta.reportes.map(r=>`<option value="${r.id}" ${m.target===r.id?'selected':''}>${esc(r.nombre)}</option>`).join('');case 'config':return Object.entries(CONFIG_PANTALLAS).map(([k,v])=>`<option value="${k}" ${m.target===k?'selected':''}>${v}</option>`).join('');default:return ''}};
+ view(designBar('El menú lateral se dibuja desde esta lista. Cambia el orden con las flechas: el efecto es inmediato a la izquierda.')+`<div class="page-head"><h1>Menú</h1><button class="btn pri" onclick="A.mAdd()">+ Agregar opción</button></div>
+ <div class="card">${S.meta.menu.map((m,i)=>`<div class="drow ${m.visible===false?'off':''}"><div class="mv"><button onclick="A.mMov(${i},-1)">▲</button><button onclick="A.mMov(${i},1)">▼</button></div><div class="body"><div class="line">
+  <input type="text" id="mi_${m.id}" value="${esc(m.icono||'')}" style="width:44px;text-align:center" oninput="A.mSet(${i},'icono',this.value)" aria-label="Ícono" ${m.tipo==='grupo'?'disabled':''}>
+  <input type="text" id="ml_${m.id}" class="lbl" value="${esc(m.label)}" oninput="A.mSet(${i},'label',this.value)" aria-label="Texto">
+  <select id="mt_${m.id}" onchange="A.mSet(${i},'tipo',this.value,true)" aria-label="Tipo de opción"><option value="arbol" ${m.tipo==='arbol'?'selected':''}>Árbol de proyectos</option><option value="lista" ${m.tipo==='lista'?'selected':''}>Listado de un tipo</option><option value="reportes" ${m.tipo==='reportes'?'selected':''}>Lista de reportes</option><option value="reporte" ${m.tipo==='reporte'?'selected':''}>Un reporte</option><option value="config" ${m.tipo==='config'?'selected':''}>Pantalla de configuración</option><option value="url" ${m.tipo==='url'?'selected':''}>Enlace externo</option><option value="grupo" ${m.tipo==='grupo'?'selected':''}>Título de grupo</option></select>
+  ${['lista','reporte','config'].includes(m.tipo)?`<select id="mg_${m.id}" onchange="A.mSet(${i},'target',this.value)" aria-label="Destino">${targets(m)}</select>`:''}${m.tipo==='url'?`<input type="text" id="mg_${m.id}" value="${esc(m.target||'')}" placeholder="https://…" oninput="A.mSet(${i},'target',this.value)">`:''}
+  ${m.tipo!=='grupo'?`<label class="cb"><input type="checkbox" id="ms_${m.id}" ${m.sub?'checked':''} onchange="A.mSet(${i},'sub',this.checked)">Subopción</label>`:''}
+  <label class="cb"><input type="checkbox" id="mv_${m.id}" ${m.visible!==false?'checked':''} onchange="A.mSet(${i},'visible',this.checked)">Visible</label></div></div><button class="btn sm danger" onclick="A.mDel(${i})">Quitar</button></div>`).join('')}</div>`);
+}
+
+/* ============ reportes ============ */
+function vReportes(){
+ setTop(`<span class="cur">Reportes</span>`);
+ view(`<div class="page-head"><div><h1>Reportes</h1><div class="meta">Cada reporte es una definición JSON: tipo de nodo, alcance, campos, filtro y agrupación. De ahí se genera la consulta.</div></div><button class="btn pri" onclick="A.rNuevo()">+ Nuevo reporte</button></div>
+ <div class="card"><ul class="list">${S.meta.reportes.map(r=>`<li><div><a class="item" href="#/reporte/${r.id}">${esc(r.nombre)}</a><div class="note">${esc(tipo(r.tipo)?.nombre||r.tipo)}s${r.agrupar?` · agrupado por ${esc(campoDe(r.tipo,r.agrupar)?.label||r.agrupar)}`:''}</div></div><div><a class="btn sm" href="#/reporte/${r.id}">Ejecutar</a> <a class="btn sm design" href="#/reporte/${r.id}/design">Diseñar</a></div></li>`).join('')}</ul></div>`);
+}
+function ejecutarReporte(r){
+ let ns=S.datos.nodos.filter(n=>n.tipo===r.tipo);
+ if(r.alcance){const ids=new Set(desc(r.alcance).map(n=>n.id));ns=ns.filter(n=>ids.has(n.id))}
+ if(r.filtro?.campo&&r.filtro.valor!==''){ns=ns.filter(n=>{const v=n.datos[r.filtro.campo];return Array.isArray(v)?v.includes(r.filtro.valor):String(v??'')===String(r.filtro.valor)})}
+ const grupos={};ns.forEach(n=>{const g=r.agrupar?String(n.datos[r.agrupar]??'(sin valor)'):'';(grupos[g]=grupos[g]||[]).push(n)});
+ return {ns,grupos};
+}
+function pipelineMongo(r){
+ const match={tipo:r.tipo};if(r.alcance)match.path=r.alcance;if(r.filtro?.campo&&r.filtro.valor!=='')match['datos.'+r.filtro.campo]=r.filtro.valor;
+ const project={};r.campos.forEach(k=>project[['nombre','codigo','ruta'].includes(k)?k:'datos.'+k]=1);
+ const p=[{$match:match},{$project:project}];
+ if(r.agrupar){const g={_id:'$datos.'+r.agrupar,total:{$sum:1},filas:{$push:'$$ROOT'}};formDeTipo(r.tipo)?.campos.filter(c=>c.tipo==='numero'&&r.campos.includes(c.key)).forEach(c=>g['suma_'+c.key]={$sum:'$datos.'+c.key});p.push({$group:g},{$sort:{_id:1}})}
+ return JSON.stringify(p,null,2);
+}
+function vReporte(rid,mode){
+ const r=S.meta.reportes.find(x=>x.id===rid);if(!r){location.hash='#/reportes';return}
+ const f=formDeTipo(r.tipo);const design=mode==='design';
+ setTop(`<a href="#/reportes">Reportes</a><span class="sep">›</span><span class="cur">${esc(r.nombre)}</span>`,design?`<a class="btn" href="#/reporte/${rid}">← Ejecutar</a>`:designBtn(`#/reporte/${rid}/design`,'Diseñar este reporte'));
+ const base=[{key:'codigo',label:'Código'},{key:'nombre',label:'Nombre'},{key:'ruta',label:'Ubicación'}];
+ const cols=r.campos.map(k=>base.find(b=>b.key===k)||f?.campos.find(c=>c.key===k)).filter(Boolean);
+ const {ns,grupos}=ejecutarReporte(r);
+ const celda=(n,c)=>{if(c.key==='codigo')return `<td class="code">${esc(n.codigo)}</td>`;if(c.key==='nombre')return `<td><a href="#/nodo/${n.id}">${esc(n.nombre)}</a></td>`;if(c.key==='ruta')return `<td class="note">${esc(rutaStr(n.id))}</td>`;return `<td class="${c.tipo==='numero'?'num':''}">${mostrarValor(c,n.datos[c.key])}</td>`};
+ const numCols=cols.filter(c=>c.tipo==='numero');
+ const filas=Object.entries(grupos).map(([g,arr])=>{const fg=campoDe(r.tipo,r.agrupar);const head=r.agrupar?`<tr class="group-row"><td colspan="${cols.length}">${fg?mostrarValor(fg,g==='(sin valor)'?'':g):esc(g)} <span class="note">· ${arr.length} registro${arr.length!==1?'s':''}${numCols.map(c=>` · ${esc(c.label)}: ${fmtNum(arr.reduce((s,n)=>s+(Number(n.datos[c.key])||0),0))}`).join('')}</span></td></tr>`:'';return head+arr.map(n=>`<tr>${cols.map(c=>celda(n,c)).join('')}</tr>`).join('')}).join('');
+ const dsg=design?`<div class="card"><h3>Definición</h3><div class="form-grid">
+  <div class="fld half"><label for="rn">Nombre</label><input type="text" id="rn" value="${esc(r.nombre)}" oninput="A.rSet('${rid}','nombre',this.value)"></div>
+  <div class="fld half"><label for="rt">Tipo de nodo</label><select id="rt" onchange="A.rSet('${rid}','tipo',this.value,true)">${S.meta.tipos.map(t=>`<option value="${t.id}" ${t.id===r.tipo?'selected':''}>${esc(t.nombre)}</option>`).join('')}</select></div>
+  <div class="fld half"><label for="ra">Alcance (solo debajo de…)</label><select id="ra" onchange="A.rSet('${rid}','alcance',this.value,true)"><option value="">Todo el sistema</option>${S.datos.nodos.filter(n=>hijos(n.id).length).map(n=>`<option value="${n.id}" ${n.id===r.alcance?'selected':''}>${esc(n.codigo)} · ${esc(n.nombre)}</option>`).join('')}</select></div>
+  <div class="fld half"><label for="rg">Agrupar por</label><select id="rg" onchange="A.rSet('${rid}','agrupar',this.value,true)"><option value="">(sin agrupar)</option>${(f?.campos||[]).filter(c=>['lista','radio','checkbox','texto'].includes(c.tipo)).map(c=>`<option value="${c.key}" ${c.key===r.agrupar?'selected':''}>${esc(c.label)}</option>`).join('')}</select></div>
+  <div class="fld half"><label for="rfc">Filtrar: campo</label><select id="rfc" onchange="A.rFiltro('${rid}','campo',this.value,true)"><option value="">(sin filtro)</option>${(f?.campos||[]).map(c=>`<option value="${c.key}" ${c.key===r.filtro?.campo?'selected':''}>${esc(c.label)}</option>`).join('')}</select></div>
+  <div class="fld half"><label for="rfv">Filtrar: valor</label>${(()=>{const fc=f?.campos.find(c=>c.key===r.filtro?.campo);if(fc&&['lista','radio','multiple'].includes(fc.tipo))return `<select id="rfv" onchange="A.rFiltro('${rid}','valor',this.value,true)"><option value="">— cualquiera —</option>${opciones(fc).map(o=>`<option value="${esc(o.valor)}" ${o.valor===r.filtro.valor?'selected':''}>${esc(o.etiqueta)}</option>`).join('')}</select>`;return `<input type="text" id="rfv" value="${esc(r.filtro?.valor||'')}" oninput="A.rFiltro('${rid}','valor',this.value)" ${fc?'':'disabled'}>`})()}</div>
+  <div class="fld full"><label>Columnas</label><div class="opts">${base.concat(f?.campos||[]).map(c=>`<label><input type="checkbox" id="rc_${c.key}" ${r.campos.includes(c.key)?'checked':''} onchange="A.rCol('${rid}','${c.key}',this.checked)">${esc(c.label)}</label>`).join('')}</div></div></div>
+  <div class="actions"><button class="btn danger" onclick="A.rDel('${rid}')">Eliminar reporte</button><a class="btn pri" href="#/reporte/${rid}">Ver resultado</a></div></div>`:'';
+ view((design?designBar('Un reporte se define eligiendo tipo, alcance, columnas, filtro y agrupación. Abajo se ve el resultado y la consulta generada.'):'')+`<div class="page-head"><div><h1>${esc(r.nombre)}</h1><div class="meta">${ns.length} ${esc(tipo(r.tipo)?.nombre.toLowerCase()||'')}s${r.alcance?` debajo de <a href="#/nodo/${r.alcance}">${esc(nodo(r.alcance)?.nombre||'')}</a>`:''}${r.filtro?.campo&&r.filtro.valor!==''?` · filtro ${esc(campoDe(r.tipo,r.filtro.campo)?.label||r.filtro.campo)} = ${esc(r.filtro.valor)}`:''}</div></div><div><button class="btn" onclick="A.copiar(document.getElementById('rtbl').innerText,'Tabla copiada')">Copiar tabla</button></div></div>
+ <div class="stack">${dsg}<div class="card tbl-wrap"><table id="rtbl"><thead><tr>${cols.map(c=>`<th class="${c.tipo==='numero'?'num':''}">${esc(c.label)}</th>`).join('')}</tr></thead><tbody>${filas||`<tr><td colspan="${cols.length||1}" class="empty">Sin resultados.</td></tr>`}</tbody></table></div>
+ <div class="cols"><div class="card"><h3>Definición del reporte (JSON)</h3><pre>${esc(JSON.stringify(r,null,2))}</pre></div><div class="card"><h3>Consulta que se generaría en MongoDB</h3><pre>${esc(pipelineMongo(r))}</pre><div class="note" style="margin-top:8px">La definición se traduce a un <i>aggregation pipeline</i>. El alcance usa el campo <span class="code">path</span> (ruta materializada de ancestros) para tomar todo un subárbol en una sola consulta.</div></div></div></div>`);
+}
+
+/* ============ JSON del sistema ============ */
+function vJson(tab){
+ tab=tab||'meta';setTop(`<span class="cur">JSON del sistema</span>`);
+ const obj=tab==='datos'?S.datos:S.meta;
+ view(`<div class="page-head"><div><h1>JSON del sistema</h1><div class="meta">La definición (meta) describe pantallas, tipos, listas, menú y reportes. Los datos son documentos con un objeto <span class="code">datos</span> libre, moldeado por la definición.</div></div><div><button class="btn" onclick="A.copiar(JSON.stringify(S.${tab},null,2),'JSON copiado')">Copiar</button></div></div>
+ <div class="tabs"><a href="#/json/meta" class="${tab==='meta'?'on':''}">Definición (meta)</a><a href="#/json/datos" class="${tab==='datos'?'on':''}">Datos</a><a href="#/json/importar" class="${tab==='importar'?'on':''}">Importar</a></div>
+ ${tab==='importar'?`<div class="card"><h2>Reemplazar la definición</h2><div class="note" style="margin-bottom:8px">Pega aquí un JSON de definición (meta) exportado de otro ambiente. Así se lleva lo diseñado con el cliente al sistema real.</div><textarea id="imp" style="width:100%;min-height:220px;font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:6px;padding:10px;background:var(--panel)"></textarea><div class="actions"><button class="btn pri" onclick="A.importar()">Importar definición</button></div></div>`:`<div class="card"><pre>${esc(JSON.stringify(obj,null,2))}</pre></div>`}`);
+}
+
+/* ============ acciones ============ */
+function siguienteCodigo(parentId,tid){
+ if(parentId){const p=nodo(parentId);return `${p.codigo}.${hijos(parentId).length+1}`}
+ const n=S.datos.nodos.filter(x=>!x.parentId).length+1;return `PRJ-${String(n).padStart(3,'0')}`;
+}
+function hist(nodoId,campo,antes,despues){S.datos.historial.unshift({nodoId,fecha:new Date().toISOString().slice(0,16).replace('T',' '),campo,antes,despues})}
+function refresh(){route()}
+const A={
+ reset(){if(confirm('¿Volver a los datos y definiciones iniciales del demo?')){S=seed();save();location.hash='#/arbol';refresh();toast('Demo restablecido')}},
+ copiar(txt,msg){navigator.clipboard?.writeText(txt).then(()=>toast(msg)).catch(()=>toast('No se pudo copiar'))},
+ /* nodos */
+ nuevoNodo(parentId,tid){const t=tipo(tid);const nombre=prompt(`Nombre de la nueva ${t.nombre.toLowerCase()}:`);if(!nombre)return;const n={id:uid(),tipo:tid,parentId,codigo:siguienteCodigo(parentId,tid),nombre,creado:hoy(),datos:{}};S.datos.nodos.push(n);save();location.hash='#/nodo/'+n.id;toast('Creado '+n.codigo)},
+ renombrar(id){const n=nodo(id);const v=prompt('Nuevo nombre:',n.nombre);if(v&&v!==n.nombre){hist(id,'nombre',n.nombre,v);n.nombre=v;save();refresh()}},
+ borrarNodo(id){const n=nodo(id);const d=desc(id);if(!confirm(`¿Eliminar "${n.nombre}"${d.length?` y sus ${d.length} internos`:''}?`))return;const ids=new Set([id,...d.map(x=>x.id)]);S.datos.nodos=S.datos.nodos.filter(x=>!ids.has(x.id));S.datos.archivos=S.datos.archivos.filter(a=>!ids.has(a.nodoId));save();location.hash=n.parentId?'#/nodo/'+n.parentId+'/hijos':'#/arbol';toast('Eliminado')},
+ guardarNodo(id){const n=nodo(id);const f=formDeTipo(n.tipo);const nuevo=leerForm(f);
+  const falta=f.campos.filter(c=>c.requerido&&c.visible!==false&&!document.querySelector(`.fld[data-key="${c.key}"]`)?.classList.contains('hidden')).find(c=>{const v=nuevo[c.key];return v===''||v===undefined||(Array.isArray(v)&&!v.length)});
+  if(falta){toast(`Falta completar: ${falta.label}`);document.getElementById('c_'+falta.key)?.focus();return}
+  f.campos.forEach(c=>{const a=n.datos[c.key],b=nuevo[c.key];if(JSON.stringify(a??'')!==JSON.stringify(b??'')){const sh=v=>c.tipo==='checkbox'?(v?'Sí':'No'):Array.isArray(v)?v.join(', '):(['lista','radio'].includes(c.tipo)&&v?etiquetaOpcion(c,v).etiqueta:String(v??''));hist(id,c.key,sh(a),sh(b))}});
+  n.datos={...n.datos,...nuevo};save();refresh();toast('Guardado')},
+ /* archivos */
+ upName(inp){const f=inp.files?.[0];if(!f)return;document.getElementById('up_nombre').value=f.name;inp.dataset.size=f.size;if(/\.(eml|msg)$/i.test(f.name)){document.getElementById('up_clase').value='email';A.upClase('email')}},
+ upClase(v){document.querySelectorAll('.fld.em').forEach(e=>e.classList.toggle('hidden',v!=='email'))},
+ registrarArchivo(nodoId){const nombre=document.getElementById('up_nombre').value.trim();if(!nombre){toast('Indica el archivo o su nombre');return}const clase=document.getElementById('up_clase').value;const a={id:uid(),nodoId,nombre,clase,tamano:Number(document.getElementById('up_file').dataset.size||0),fecha:document.getElementById('up_fecha').value||hoy(),origen:document.getElementById('up_origen').value};if(clase==='email')a.email={de:document.getElementById('up_de').value,para:document.getElementById('up_para').value,asunto:document.getElementById('up_asunto').value,fechaEnvio:a.fecha};S.datos.archivos.push(a);hist(nodoId,'archivos','',nombre);save();refresh();toast('Constancia registrada')},
+ borrarArchivo(id){if(!confirm('¿Quitar esta constancia?'))return;S.datos.archivos=S.datos.archivos.filter(a=>a.id!==id);save();refresh()},
+ /* formularios */
+ nuevoForm(){const nombre=prompt('Nombre de la nueva pantalla:');if(!nombre)return;let id='f_'+slug(nombre);while(S.meta.formularios[id])id+='_';S.meta.formularios[id]={id,nombre,campos:[]};save();location.hash='#/form/'+id},
+ fNombre(fid,v){form(fid).nombre=v;save()},
+ fAdd(fid){const f=form(fid);const label=prompt('Etiqueta del nuevo campo:');if(!label)return;let key=slug(label);while(f.campos.some(c=>c.key===key))key+='_';f.campos.push({key,label,tipo:'texto',requerido:false,visible:true,ancho:'half'});save();refresh();setTimeout(()=>document.getElementById('fl_'+key)?.focus(),0)},
+ fSet(fid,i,prop,v,re){const c=form(fid).campos[i];c[prop]=v;if(prop==='tipo'){if(['lista','radio','multiple'].includes(v)&&!c.catalogo&&!c.opciones)c.opciones=[{valor:'opcion_1',etiqueta:'Opción 1'},{valor:'opcion_2',etiqueta:'Opción 2'}]}save();re?refresh():refreshPreview(fid)},
+ fOrigen(fid,i,v){const c=form(fid).campos[i];if(v){c.catalogo=v;delete c.opciones}else{delete c.catalogo;c.opciones=c.opciones||[{valor:'opcion_1',etiqueta:'Opción 1'}]}save();refresh()},
+ fInline(fid,i,v){form(fid).campos[i].opciones=v.split(';').map(s=>s.trim()).filter(Boolean).map(s=>({valor:slug(s),etiqueta:s}));save();refreshPreview(fid)},
+ fCond(fid,i,prop,v){const c=form(fid).campos[i];if(prop==='campo'){if(!v){delete c.visibleSi;save();refresh();return}c.visibleSi={campo:v,valor:c.visibleSi?.valor||''};save();refresh();return}c.visibleSi.valor=v;save();refreshPreview(fid)},
+ fMov(fid,i,d){const a=form(fid).campos;const j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];save();refresh()},
+ fDel(fid,i){const c=form(fid).campos[i];if(!confirm(`¿Quitar el campo "${c.label}" de la pantalla? Los datos ya guardados en ese campo se conservan en los documentos.`))return;form(fid).campos.splice(i,1);save();refresh()},
+ /* tipos */
+ nuevoTipo(){const nombre=prompt('Nombre del nuevo tipo de nodo (p. ej. Hito, Contrato, Entregable):');if(!nombre)return;let id=slug(nombre);while(tipo(id))id+='_';const fid='f_'+id;S.meta.formularios[fid]={id:fid,nombre:'Ficha de '+nombre.toLowerCase(),campos:[]};S.meta.tipos.push({id,nombre,icono:'●',formId:fid,hijos:[],columnas:[]});save();refresh();toast('Tipo creado. Define quién puede contenerlo y diseña su pantalla.')},
+ tSet(i,prop,v,re){S.meta.tipos[i][prop]=v;if(prop==='formId')S.meta.tipos[i].columnas=[];save();if(re)refresh();else renderNav()},
+ tHijo(i,hid,on){const t=S.meta.tipos[i];t.hijos=on?[...new Set([...t.hijos,hid])]:t.hijos.filter(x=>x!==hid);save()},
+ tCol(i,key,on){const t=S.meta.tipos[i];t.columnas=t.columnas||[];t.columnas=on?[...new Set([...t.columnas,key])]:t.columnas.filter(x=>x!==key);save()},
+ tDel(i){const t=S.meta.tipos[i];if(!confirm(`¿Quitar el tipo "${t.nombre}"?`))return;S.meta.tipos.splice(i,1);S.meta.tipos.forEach(o=>o.hijos=o.hijos.filter(x=>x!==t.id));save();refresh()},
+ /* catálogos */
+ nuevoCat(){const nombre=prompt('Nombre de la nueva lista de opciones:');if(!nombre)return;let id=slug(nombre);while(S.meta.catalogos[id])id+='_';S.meta.catalogos[id]={id,nombre,opciones:[]};save();location.hash='#/catalogos/'+id},
+ cNombre(id,v){S.meta.catalogos[id].nombre=v;save()},
+ cAdd(id){const et=prompt('Etiqueta de la nueva opción:');if(!et)return;const c=S.meta.catalogos[id];let valor=slug(et);while(c.opciones.some(o=>o.valor===valor))valor+='_';c.opciones.push({valor,etiqueta:et,color:'#8A94A0'});save();refresh()},
+ cSet(id,i,prop,v){S.meta.catalogos[id].opciones[i][prop]=v;save()},
+ cMov(id,i,d){const a=S.meta.catalogos[id].opciones;const j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];save();refresh()},
+ cDel(id,i){S.meta.catalogos[id].opciones.splice(i,1);save();refresh()},
+ /* menú */
+ mAdd(){S.meta.menu.push({id:uid(),label:'Nueva opción',icono:'•',tipo:'arbol',visible:true});save();refresh()},
+ mSet(i,prop,v,re){const m=S.meta.menu[i];m[prop]=v;if(prop==='tipo'){if(v==='lista')m.target=S.meta.tipos[0]?.id;else if(v==='reporte')m.target=S.meta.reportes[0]?.id;else if(v==='config')m.target='formularios';else m.target=''}save();re?refresh():renderNav()},
+ mMov(i,d){const a=S.meta.menu;const j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];save();refresh()},
+ mDel(i){S.meta.menu.splice(i,1);save();refresh()},
+ /* reportes */
+ rNuevo(){const nombre=prompt('Nombre del nuevo reporte:');if(!nombre)return;const r={id:'r'+uid(),nombre,tipo:S.meta.tipos[0].id,alcance:'',campos:['codigo','nombre','ruta'],filtro:{campo:'',valor:''},agrupar:''};S.meta.reportes.push(r);save();location.hash='#/reporte/'+r.id+'/design'},
+ rSet(id,prop,v,re){const r=S.meta.reportes.find(x=>x.id===id);r[prop]=v;if(prop==='tipo'){r.campos=['codigo','nombre','ruta'];r.agrupar='';r.filtro={campo:'',valor:''}}save();if(re)refresh()},
+ rFiltro(id,prop,v,re){const r=S.meta.reportes.find(x=>x.id===id);r.filtro=r.filtro||{campo:'',valor:''};r.filtro[prop]=v;if(prop==='campo')r.filtro.valor='';save();if(re)refresh()},
+ rCol(id,key,on){const r=S.meta.reportes.find(x=>x.id===id);r.campos=on?[...new Set([...r.campos,key])]:r.campos.filter(x=>x!==key);save();refresh()},
+ rDel(id){if(!confirm('¿Eliminar este reporte?'))return;S.meta.reportes=S.meta.reportes.filter(x=>x.id!==id);S.meta.menu=S.meta.menu.filter(m=>!(m.tipo==='reporte'&&m.target===id));save();location.hash='#/reportes'},
+ importar(){try{const o=JSON.parse(document.getElementById('imp').value);if(!o.tipos||!o.formularios)throw new Error('falta tipos/formularios');S.meta=o;save();location.hash='#/arbol';refresh();toast('Definición importada')}catch(e){toast('JSON inválido: '+e.message)}}
+};
+
+load();window.addEventListener('hashchange',route);route();
+</script>
