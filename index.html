@@ -264,7 +264,7 @@ const TIP={
  arbolPanel:'Panel de navegación que acompaña a la ficha. Muestra el árbol con los proyectos más recientes arriba, de a diez por página, con la rama del nodo actual desplegada y el nodo resaltado, para moverse a un hermano, subir o bajar sin volver a la vista Proyectos. El punto de color a la derecha es el estado; pasa el mouse por un nombre para ver tipo y código. Se puede ocultar y el sistema recuerda la elección en este navegador.',
  arbolBuscar:'Busca por título en todos los proyectos y en todos sus niveles (etapas, tareas, lo que haya). Ignora mayúsculas y tildes. Muestra solo las coincidencias con su ruta desplegada; Esc o × cierra la búsqueda. Es el primer paso de la búsqueda global del sistema, que después cubrirá también los campos, archivos e historial.',
  arbolPaginas:'Los proyectos raíz se muestran de a diez, los más recientes primero. Solo se pagina el nivel raíz: los internos de un proyecto siempre se ven completos. Al abrir un nodo, el árbol va a la página donde está su proyecto.',
- arbolNuevo:'Crea un proyecto en el nivel raíz (sin padre). Para crear algo dentro de un nodo, usa el botón + de su fila en el árbol o los botones "+ Nueva…" de su ficha.',
+ arbolNuevo:'Crea un proyecto en el nivel raíz (sin padre). Para crear algo dentro de un nodo, usa el botón + de su fila en el árbol o los botones de crear de su ficha.',
  chipEstado:'Valor del campo "estado" del nodo, mostrado con el color definido en la Lista de opciones "Estados". Si a la pantalla del tipo le quitas el campo estado, este chip deja de mostrarse.',
  internos:'Cantidad de nodos que cuelgan directamente de este.',
  ubicacion:'Ruta de ancestros del nodo: en qué proyecto y en qué etapa está. Se calcula desde el árbol; en la base real se guarda como "path" (ruta materializada) para poder consultar subárboles completos en una sola consulta.',
@@ -291,6 +291,7 @@ const TIP={
  pantNueva:'Crea una pantalla vacía. Luego hay que asignarla a un tipo de nodo (Tipos de nodo › Pantalla que usa) para que alguien la vea.',
  /* tipos */
  tIcono:'Un carácter o emoji que representa el tipo en el árbol y en los listados. Solo visual.',
+ tNuevoLabel:'Texto del botón que crea un nodo de este tipo (en la ficha del padre y en el menú del + del árbol). Sirve para concordar el género: "Nuevo proyecto", "Nueva etapa". Si se deja vacío se usa "Crear" más el nombre del tipo.',
  tNombre:'Nombre del tipo tal como se muestra al usuario (en singular). Se puede cambiar libremente.',
  tId:'Identificador interno del tipo. Se deriva del nombre al crearlo y luego no cambia; es lo que cada nodo guarda en su campo "tipo".',
  tForm:'La pantalla (formulario) que se abre al editar un nodo de este tipo. Todos los nodos del tipo comparten la misma ficha. Puedes elegir una existente o diseñarla.',
@@ -386,9 +387,9 @@ function genNodos(){
 function seed(){return{
  meta:{
   tipos:[
-   {id:'proyecto',nombre:'Proyecto',icono:'',formId:'f_proyecto',hijos:['proyecto','etapa','tarea'],columnas:['sponsor','project_manager','estado'],archivos:true},
-   {id:'etapa',nombre:'Etapa',icono:'',formId:'f_etapa',hijos:['etapa','tarea'],columnas:['estado','avance','fecha_fin'],archivos:true},
-   {id:'tarea',nombre:'Tarea',icono:'',formId:'f_tarea',hijos:[],columnas:['estado','prioridad','responsable','fecha_limite'],archivos:true}
+   {id:'proyecto',nombre:'Proyecto',nuevo:'Nuevo proyecto',icono:'',formId:'f_proyecto',hijos:['proyecto','etapa','tarea'],columnas:['sponsor','project_manager','estado'],archivos:true},
+   {id:'etapa',nombre:'Etapa',nuevo:'Nueva etapa',icono:'',formId:'f_etapa',hijos:['etapa','tarea'],columnas:['estado','avance','fecha_fin'],archivos:true},
+   {id:'tarea',nombre:'Tarea',nuevo:'Nueva tarea',icono:'',formId:'f_tarea',hijos:[],columnas:['estado','prioridad','responsable','fecha_limite'],archivos:true}
   ],
   formularios:{
    f_proyecto:{id:'f_proyecto',nombre:'Ficha de proyecto',campos:[
@@ -475,7 +476,7 @@ function seed(){return{
  }
 }}
 let S;
-const VERSION=4;
+const VERSION=5;
 function load(){try{const r=localStorage.getItem(LS);S=r?JSON.parse(r):seed()}catch(e){S=seed()}
  /* migraciones: conservan las definiciones del usuario y ajustan solo lo necesario */
  const v=S.version||1;
@@ -488,6 +489,7 @@ function load(){try{const r=localStorage.getItem(LS);S=r?JSON.parse(r):seed()}ca
   const fp=S.meta.formularios.f_proyecto;if(fp){['project_manager','sponsor'].forEach(k=>{if(!fp.campos.some(c=>c.key===k))fp.campos.unshift(sd.meta.formularios.f_proyecto.campos.find(c=>c.key===k))})}
   const tp=S.meta.tipos.find(t=>t.id==='proyecto');if(tp)tp.columnas=['sponsor','project_manager','estado'];
   const r2=S.meta.reportes.find(r=>r.id==='r2');if(r2)Object.assign(r2,sd.meta.reportes.find(r=>r.id==='r2'))}
+ if(v<5){const sd=seed();S.meta.tipos.forEach(t=>{if(!t.nuevo){const st=sd.meta.tipos.find(x=>x.id===t.id);if(st?.nuevo)t.nuevo=st.nuevo}})}
  if(v<VERSION){S.version=VERSION;save()}}
 function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
@@ -505,6 +507,7 @@ window.addEventListener('scroll',hideTip,true);
 
 /* ============ acceso al modelo ============ */
 const tipo=id=>S.meta.tipos.find(t=>t.id===id);
+const labelNuevo=t=>(t?.nuevo||'').trim()||('Crear '+String(t?.nombre||'').toLowerCase()); /* texto del botón de crear, definible en Tipos de nodo */
 const form=id=>S.meta.formularios[id];
 const formDeTipo=tid=>form(tipo(tid)?.formId);
 const nodo=id=>S.datos.nodos.find(n=>n.id===id);
@@ -632,7 +635,7 @@ function vNodo(id,tab){
  view(`<div class="nodo-layout ${arbolVisible?'':'sin-arbol'}">${panel}<div class="nodo-main"><div class="page-head"><div><h1>${esc(n.nombre)} <span class="q" tabindex="0" data-tip="${esc(`${t.nombre} · ${n.codigo} · creado ${n.creado}
 
 ${TIP.codigo}`)}">i</span> <button class="btn ghost sm" onclick="A.renombrar('${id}')" data-tip="${esc(TIP.renombrar)}">✎</button></h1></div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap">${t.hijos.map(ht=>tipo(ht)).filter(Boolean).map(th=>`<button class="btn" onclick="A.nuevoNodo('${id}','${th.id}')" data-tip="${esc(TIP.nuevoInterno)}">+ Nueva ${esc(th.nombre.toLowerCase())}</button>`).join('')}<button class="btn danger" onclick="A.borrarNodo('${id}')" data-tip="${esc(TIP.eliminar)}">Eliminar</button></div></div><div class="tabs">${tabs}</div>${body}</div></div>`);
+  <div style="display:flex;gap:8px;flex-wrap:wrap">${t.hijos.map(ht=>tipo(ht)).filter(Boolean).map(th=>`<button class="btn" onclick="A.nuevoNodo('${id}','${th.id}')" data-tip="${esc(TIP.nuevoInterno)}">+ ${esc(labelNuevo(th))}</button>`).join('')}<button class="btn danger" onclick="A.borrarNodo('${id}')" data-tip="${esc(TIP.eliminar)}">Eliminar</button></div></div><div class="tabs">${tabs}</div>${body}</div></div>`);
  document.querySelector('.explorador .row.cur')?.scrollIntoView({block:'nearest'});
  if(tab==='datos')aplicarCondiciones(f);
 }
@@ -719,7 +722,7 @@ function vTipos(){
  setTop(`<span class="cur">Tipos de nodo</span>`,`<a class="btn" href="#/arbol">← Ver el árbol</a>`);
  view(designBar('Los tipos definen qué es cada nivel del árbol, qué pantalla usa y qué puede contener.')+`<div class="page-head"><h1>Tipos de nodo ${q(TIP.tipoNodo)}</h1><button class="btn pri" onclick="A.nuevoTipo()" data-tip="${esc(TIP.tNuevo)}">+ Nuevo tipo</button></div><div class="stack">`+
  S.meta.tipos.map((t,i)=>{const f=form(t.formId);const cnt=S.datos.nodos.filter(n=>n.tipo===t.id).length;
-  return `<div class="card"><div class="page-head" style="margin-bottom:12px"><div class="line" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><input type="text" id="ti_${t.id}" value="${esc(t.icono)}" style="width:44px;text-align:center" oninput="A.tSet(${i},'icono',this.value)" aria-label="Ícono" data-tip="${esc(TIP.tIcono)}"><input type="text" id="tn_${t.id}" value="${esc(t.nombre)}" style="font-weight:600;font-size:16px" oninput="A.tSet(${i},'nombre',this.value)" aria-label="Nombre del tipo" data-tip="${esc(TIP.tNombre)}"><span class="code" data-tip="${esc(TIP.tId)}">${t.id}</span><span class="note" data-tip="Cuántos nodos de este tipo existen hoy en el árbol. Mientras haya alguno, el tipo no se puede quitar.">${cnt} registros</span></div>${cnt?'':`<button class="btn sm danger" onclick="A.tDel(${i})" data-tip="${esc(TIP.tQuitar)}">Quitar tipo</button>`}</div>
+  return `<div class="card"><div class="page-head" style="margin-bottom:12px"><div class="line" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><input type="text" id="ti_${t.id}" value="${esc(t.icono)}" style="width:44px;text-align:center" oninput="A.tSet(${i},'icono',this.value)" aria-label="Ícono" data-tip="${esc(TIP.tIcono)}"><input type="text" id="tn_${t.id}" value="${esc(t.nombre)}" style="font-weight:600;font-size:16px" oninput="A.tSet(${i},'nombre',this.value)" aria-label="Nombre del tipo" data-tip="${esc(TIP.tNombre)}"><span class="code" data-tip="${esc(TIP.tId)}">${t.id}</span><label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)">Botón de crear ${q(TIP.tNuevoLabel)}<input type="text" id="tb_${t.id}" value="${esc(t.nuevo||'')}" placeholder="Crear ${esc(t.nombre.toLowerCase())}" style="width:160px" oninput="A.tSet(${i},'nuevo',this.value)" aria-label="Texto del botón de crear" data-tip="${esc(TIP.tNuevoLabel)}"></label><span class="note" data-tip="Cuántos nodos de este tipo existen hoy en el árbol. Mientras haya alguno, el tipo no se puede quitar.">${cnt} registros</span></div>${cnt?'':`<button class="btn sm danger" onclick="A.tDel(${i})" data-tip="${esc(TIP.tQuitar)}">Quitar tipo</button>`}</div>
   <div class="form-grid"><div class="fld half"><label for="tf_${t.id}">Pantalla que usa ${q(TIP.tForm)}</label><div class="line" style="display:flex;gap:8px"><select id="tf_${t.id}" onchange="A.tSet(${i},'formId',this.value,true)" data-tip="${esc(TIP.tForm)}">${Object.values(S.meta.formularios).map(x=>`<option value="${x.id}" ${x.id===t.formId?'selected':''}>${esc(x.nombre)}</option>`).join('')}</select><a class="btn sm design" href="#/form/${t.formId}" data-tip="${esc(TIP.btnDisenar)}">Diseñar</a></div></div>
   <div class="fld half"><label>Archivos adjuntos ${q(TIP.tArchivos)}</label><div class="opts"><label data-tip="${esc(TIP.tArchivos)}"><input type="checkbox" id="ta_${t.id}" ${t.archivos!==false?'checked':''} onchange="A.tSet(${i},'archivos',this.checked)">Admite archivos adjuntos (pestaña Archivos)</label></div><div class="help">Para archivos con significado propio dentro de la ficha, agrega un campo "Archivo adjunto" en la pantalla.</div></div>
   <div class="fld half"><label>Puede contener ${q(TIP.tHijos)}</label><div class="opts">${S.meta.tipos.map(o=>`<label data-tip="${esc(`Si está marcado, dentro de un nodo "${t.nombre}" se podrá crear un nodo "${o.nombre}"${o.id===t.id?' (anidado en sí mismo, sin límite de profundidad)':''}.`)}"><input type="checkbox" id="th_${t.id}_${o.id}" ${t.hijos.includes(o.id)?'checked':''} onchange="A.tHijo(${i},'${o.id}',this.checked)">${esc(o.nombre)}</label>`).join('')}</div></div>
@@ -868,8 +871,8 @@ const A={
  arbolToggle(){arbolVisible=!arbolVisible;try{localStorage.setItem(LS+'-arbol',arbolVisible?'1':'0')}catch(e){}refresh()},
  /* nodos */
  menuNuevo(ev,parentId){ev.stopPropagation();const ts=parentId?(tipo(nodo(parentId).tipo)?.hijos||[]).map(tipo).filter(Boolean):tiposRaiz();if(!ts.length)return;if(ts.length===1)return A.nuevoNodo(parentId,ts[0].id);
-  const m=popm;m.innerHTML=ts.map(t=>`<button onclick="A.nuevoNodo(${parentId?`'${parentId}'`:'null'},'${t.id}')">+ Nueva ${esc(t.nombre.toLowerCase())}</button>`).join('');m.style.display='block';const r=ev.currentTarget.getBoundingClientRect();m.style.left=Math.min(r.left,window.innerWidth-170)+'px';m.style.top=(r.bottom+4)+'px';hideTip()},
- nuevoNodo(parentId,tid){popm.style.display='none';const t=tipo(tid);const nombre=prompt(`Nombre de la nueva ${t.nombre.toLowerCase()}:`);if(!nombre)return;const n={id:uid(),tipo:tid,parentId,codigo:siguienteCodigo(parentId,tid),nombre,creado:hoy(),datos:{}};S.datos.nodos.push(n);save();location.hash='#/nodo/'+n.id;toast('Creado '+n.codigo)},
+  const m=popm;m.innerHTML=ts.map(t=>`<button onclick="A.nuevoNodo(${parentId?`'${parentId}'`:'null'},'${t.id}')">+ ${esc(labelNuevo(t))}</button>`).join('');m.style.display='block';const r=ev.currentTarget.getBoundingClientRect();m.style.left=Math.min(r.left,window.innerWidth-170)+'px';m.style.top=(r.bottom+4)+'px';hideTip()},
+ nuevoNodo(parentId,tid){popm.style.display='none';const t=tipo(tid);const nombre=prompt(`${labelNuevo(t)}. Nombre:`);if(!nombre)return;const n={id:uid(),tipo:tid,parentId,codigo:siguienteCodigo(parentId,tid),nombre,creado:hoy(),datos:{}};S.datos.nodos.push(n);save();location.hash='#/nodo/'+n.id;toast('Creado '+n.codigo)},
  renombrar(id){const n=nodo(id);const v=prompt('Nuevo nombre:',n.nombre);if(v&&v!==n.nombre){hist(id,'nombre',n.nombre,v);n.nombre=v;save();refresh()}},
  borrarNodo(id){const n=nodo(id);const d=desc(id);if(!confirm(`¿Eliminar "${n.nombre}"${d.length?` y sus ${d.length} internos`:''}?`))return;const ids=new Set([id,...d.map(x=>x.id)]);S.datos.nodos=S.datos.nodos.filter(x=>!ids.has(x.id));S.datos.archivos=S.datos.archivos.filter(a=>!ids.has(a.nodoId));save();const cur=(location.hash.match(/^#\/nodo\/([^/]+)/)||[])[1];if(cur&&ids.has(cur))location.hash=n.parentId?'#/nodo/'+n.parentId:'#/arbol';else refresh();toast('Eliminado')},
  guardarNodo(id){const n=nodo(id);const f=formDeTipo(n.tipo);const nuevo=leerForm(f);
