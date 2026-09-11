@@ -43,6 +43,17 @@ nav .grp{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var
 nav .ic{width:16px;text-align:center;opacity:.85;font-size:12px}
 .side-foot{padding:10px 18px 0;font-size:11.5px;color:var(--side-muted);border-top:1px solid rgba(255,255,255,.08)}
 .side-foot button{background:none;border:1px solid rgba(255,255,255,.18);color:var(--side-ink);border-radius:5px;padding:4px 8px;font-size:11.5px;margin-top:6px}
+.menu-tg{background:none;border:1px solid rgba(255,255,255,.18);color:var(--side-ink);border-radius:5px;padding:5px 10px;font-size:12px;margin:8px 8px 0;display:flex;align-items:center;gap:8px;justify-content:center}
+.menu-tg:hover{background:rgba(255,255,255,.06)}
+.app.menu-plegado{grid-template-columns:56px 1fr}
+.app.menu-plegado .brand{padding-inline:0;text-align:center}
+.app.menu-plegado .brand b{font-size:13px}
+.app.menu-plegado .brand span,.app.menu-plegado nav .grp,.app.menu-plegado nav a .lbl,.app.menu-plegado .side-foot,.app.menu-plegado .menu-tg .lbl{display:none}
+.app.menu-plegado nav{padding-inline:6px}
+.app.menu-plegado nav a{justify-content:center;padding:9px 0}
+.app.menu-plegado nav a.sub{padding-left:0;opacity:.7}
+.app.menu-plegado nav .ic{font-size:14px;opacity:1}
+.app.menu-plegado .menu-tg{margin-inline:6px;padding-inline:0}
 main{min-width:0;display:flex;flex-direction:column}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:10px;padding-inline:24px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;flex-wrap:wrap}
 .crumbs{font-size:13px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
@@ -170,7 +181,7 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padd
 .kv dt{color:var(--muted)}.kv dd{margin:0}
 .sw{width:14px;height:14px;border-radius:3px;border:1px solid var(--line);display:inline-block;vertical-align:middle}
 input[type=color]{width:28px;height:24px;padding:0;border:1px solid var(--line);border-radius:4px;background:none}
-@media (max-width:760px){.app{grid-template-columns:1fr}aside{flex-direction:row;flex-wrap:wrap;padding-block:8px}nav{flex-direction:row;flex-wrap:wrap}nav .grp{width:100%;padding-top:6px}.brand{border:0}.side-foot{border:0}}
+@media (max-width:760px){.app,.app.menu-plegado{grid-template-columns:1fr}.menu-tg{display:none}.app.menu-plegado nav a .lbl,.app.menu-plegado .side-foot,.app.menu-plegado nav .grp,.app.menu-plegado .brand span{display:initial}.app.menu-plegado nav a{justify-content:flex-start;padding:7px 10px}nav .ic.alt{visibility:hidden}aside{flex-direction:row;flex-wrap:wrap;padding-block:8px}nav{flex-direction:row;flex-wrap:wrap}nav .grp{width:100%;padding-top:6px}.brand{border:0}.side-foot{border:0}}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
 
@@ -178,6 +189,7 @@ input[type=color]{width:28px;height:24px;padding:0;border:1px solid var(--line);
   <aside>
     <div class="brand"><b>SisPla</b><span>Proyectos multinivel · demo</span></div>
     <nav id="nav"></nav>
+    <button class="menu-tg" id="menutg" onclick="A.menuToggle()"></button>
     <div class="side-foot">Todo lo que ves se genera desde el JSON de definición. Los cambios se guardan en este navegador.<br><a href="#/ayuda" style="color:var(--side-ink)">Ayuda y glosario</a><br><button onclick="A.reset()" data-tip="Borra todo lo que hayas cambiado en este navegador (datos y definiciones) y vuelve al ejemplo inicial de la demo. No afecta a nadie más: la demo vive solo en tu navegador.">Restablecer demo</button></div>
   </aside>
   <main>
@@ -521,13 +533,17 @@ function renderNav(){
   if(m.tipo==='grupo')return `<div class="grp" data-tip="${esc('Título de grupo del menú: no es un enlace, solo separa un bloque de opciones. Se define en Configuración › Menú.')}">${esc(m.label)}</div>`;
   const h=hrefMenu(m);const on=cur===h||(h==='#/arbol'&&(cur.startsWith('#/nodo')||cur==='#/'));
   const mt=MENU_TIPOS[m.tipo]||{label:m.tipo,desc:''};
-  return `<a href="${esc(h)}" class="${on?'on':''} ${m.sub?'sub':''}" ${m.tipo==='url'?'target="_blank" rel="noopener"':''} data-tip="${esc(`Opción de menú "${m.label}" · tipo: ${mt.label}. ${mt.desc}\n\nEsta opción no está programada: se define en Configuración › Menú, donde puedes cambiar su texto, orden, destino o quitarla.`)}"><span class="ic">${esc(m.icono||'')}</span>${esc(m.label)}</a>`;
+  return `<a href="${esc(h)}" class="${on?'on':''} ${m.sub?'sub':''}" ${m.tipo==='url'?'target="_blank" rel="noopener"':''} data-tip="${esc(`Opción de menú "${m.label}" · tipo: ${mt.label}. ${mt.desc}\n\nEsta opción no está programada: se define en Configuración › Menú, donde puedes cambiar su texto, orden, destino o quitarla.`)}">${m.icono?`<span class="ic">${esc(m.icono)}</span>`:`<span class="ic alt">${esc(menuPlegado?(m.label.trim()[0]||'·'):'')}</span>`}<span class="lbl">${esc(m.label)}</span></a>`;
  }).join('');
+ document.querySelector('.app').classList.toggle('menu-plegado',menuPlegado);
+ const tg=document.getElementById('menutg');tg.innerHTML=menuPlegado?'<span class="ic">»</span>':'<span class="ic">«</span><span class="lbl">Plegar menú</span>';
+ tg.setAttribute('data-tip',menuPlegado?'Despliega el menú lateral con sus textos.':'Reduce el menú lateral a una franja de íconos para dar más espacio a la ficha y al árbol. Pasa el mouse por un ícono para ver qué es. La elección se recuerda en este navegador.');
 }
 const designBtn=(href,txt,tip)=>`<a class="btn design" href="${href}" data-tip="${esc(tip||TIP.btnDisenar)}">⚙ ${txt||'Diseñar esta pantalla'}</a>`;
 const designBar=txt=>`<div class="design-bar"><b data-tip="${esc(TIP.diseñoBar)}">Modo diseño</b><span>${txt} Los cambios se aplican de inmediato y quedan escritos en el JSON de definición. Pasa el mouse por cualquier <span class="q" style="margin:0">?</span> para saber qué es cada cosa.</span></div>`;
 
 /* ============ vista: árbol ============ */
+let menuPlegado=true;try{menuPlegado=localStorage.getItem(LS+'-menu')!=='0'}catch(e){} /* menú lateral reducido a íconos; plegado por defecto */
 let arbolVisible=true;try{arbolVisible=localStorage.getItem(LS+'-arbol')!=='0'}catch(e){} /* panel de árbol junto a la ficha */
 const abiertos=new Set(); /* nodos desplegados en el árbol; se conserva mientras navegas */
 /* Dibuja el árbol desde pid. opt.compacto: filas cortas para el panel lateral; opt.actual: id del nodo resaltado */
@@ -810,6 +826,7 @@ const A={
  plegar(el,id){const ul=el.closest('li').querySelector(':scope > ul');if(!ul)return;ul.hidden=!ul.hidden;el.textContent=ul.hidden?'▸':'▾';if(ul.hidden)abiertos.delete(id);else abiertos.add(id)},
  desplegarTodo(){S.datos.nodos.forEach(n=>{if(hijos(n.id).length)abiertos.add(n.id)});refresh()},
  plegarTodo(){abiertos.clear();refresh()},
+ menuToggle(){menuPlegado=!menuPlegado;try{localStorage.setItem(LS+'-menu',menuPlegado?'1':'0')}catch(e){}renderNav();hideTip()},
  arbolToggle(){arbolVisible=!arbolVisible;try{localStorage.setItem(LS+'-arbol',arbolVisible?'1':'0')}catch(e){}refresh()},
  /* nodos */
  nuevoNodo(parentId,tid){const t=tipo(tid);const nombre=prompt(`Nombre de la nueva ${t.nombre.toLowerCase()}:`);if(!nombre)return;const n={id:uid(),tipo:tid,parentId,codigo:siguienteCodigo(parentId,tid),nombre,creado:hoy(),datos:{}};S.datos.nodos.push(n);save();location.hash='#/nodo/'+n.id;toast('Creado '+n.codigo)},
