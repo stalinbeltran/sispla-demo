@@ -80,7 +80,7 @@ Tipos de campo del mock: texto, texto largo, número, fecha, lista desplegable, 
 
 `path` (ruta materializada de ancestros) permite traer un subárbol completo con una consulta (`path: "p1"`), que es lo que usan los reportes con alcance. El mock lo calcula al vuelo; en la implementación real se guarda.
 
-**`archivos`** — constancias. Nunca se borran físicamente (*futuro: papelera*).
+**`archivos`** — constancias. Nunca se borran físicamente (*futuro: papelera; ver 7.4*).
 
 Dónde se pueden adjuntar es definible en dos niveles, y ambos pueden activarse o desactivarse en cualquier momento sin perder lo ya guardado:
 
@@ -106,7 +106,7 @@ Ejemplo: el cliente arranca con archivos solo en etapas; meses después pide arc
   "storageRef": "<futuro: S3 / GridFS / disco>" }
 ```
 
-**`historial`** — cambio por cambio: nodo, cuándo, campo, antes, después. Se genera al guardar comparando el documento anterior con el nuevo. Base de la "constancia".
+**`historial`** — cambio por cambio: nodo, cuándo, campo, antes, después. Se genera al guardar comparando el documento anterior con el nuevo. Base de la "constancia". En la implementación real se amplía al `log` completo de la sección 7.4.
 
 ---
 
@@ -202,7 +202,7 @@ Para cada una anoto lo que asumí en el mock. Si el supuesto vale, no hay que re
 **Sobre el historial**
 
 15. ¿Basta registrar campo, antes, después y fecha, o hace falta "quién" desde ya aunque no haya login? *Asumí sin usuario por ahora; el campo queda reservado.*
-16. ¿El historial debe ser inmutable (nadie lo edita ni borra)? *Asumí que sí.*
+16. ~~¿El historial debe ser inmutable (nadie lo edita ni borra)?~~ **Resuelto (2026-09-11): sí, y se amplía a un log completo de toda operación, con recuperación. Ver 7.4.**
 
 **Sobre reportes**
 
@@ -270,13 +270,30 @@ El árbol es el mismo componente en la página Proyectos (a todo el ancho) y en 
 - **Paginación solo en el nivel raíz.** Las raíces son independientes entre sí y se muestran de a 10 por página. Los internos de un proyecto nunca se paginan: una vez desplegado, la rama se ve completa. Al abrir un nodo, el árbol se coloca en la página donde está su proyecto raíz. En la implementación real la consulta es `{ parentId: null }` con `sort creado desc`, `skip` y `limit`; el subárbol se trae aparte con `path`.
 - **Búsqueda por título desde el árbol.** Junto a los iconos de desplegar y plegar hay una lupa que abre una caja de búsqueda. Busca en el `nombre` de todos los nodos de todos los proyectos, en todos los niveles, sin distinguir mayúsculas ni tildes. Muestra solo las coincidencias con sus ancestros desplegados y el término resaltado; mientras se busca no hay paginación. Es el primer escalón de la búsqueda global de 7.1: la misma caja crecerá para cubrir campos, archivos e historial, y el resultado mixto de 7.1 se presentará con esta misma forma de árbol filtrado.
 
+
+### 7.4 Registro completo de cambios y recuperación
+
+Requisito fijado el 2026-09-11: **todo cambio queda registrado con la información suficiente para deshacerlo.** El objetivo es que un error ocasional (borrar un elemento del árbol por equivocación, sobrescribir un campo, quitar un archivo) nunca implique pérdida de datos. No está en el mock, que hoy solo registra cambios de campos en `historial`.
+
+Reglas:
+
+- **Nada se borra físicamente.** Eliminar un nodo, un archivo o una opción de lista lo marca como borrado (`borradoEn`, `borradoPor`) y lo saca de las vistas. Los documentos siguen en su colección, y las consultas normales los excluyen con un filtro común. Esto extiende a los nodos la regla que ya tenían los archivos.
+- **Un registro por operación, con el documento completo antes y después.** El `historial` actual guarda campo, antes y después; se amplía a un `log` con `{ fecha, usuario, coleccion, docId, operacion (crear, editar, borrar, mover, restaurar), antes, despues }`, donde `antes` y `despues` son el documento entero, no solo el campo tocado. Con ello se puede reconstruir el estado de cualquier documento en cualquier fecha sin depender de nada más.
+- **Las operaciones sobre un subárbol se registran en bloque.** Borrar o mover un nodo con internos genera un registro por documento afectado, todos con el mismo `loteId`, para que "deshacer" restaure la rama completa de una vez, incluidos sus archivos.
+- **Los cambios de definición también.** Pantallas, tipos, listas, menú y reportes son documentos como los demás y pasan por el mismo log. Quitar un campo o un tipo por error se revierte igual que un dato.
+- **El log es de solo escritura.** Nadie lo edita ni lo borra desde la aplicación (responde la pregunta 16). Si por volumen hace falta archivar registros antiguos, se mueven a otra colección, no se eliminan.
+- **Recuperación desde la interfaz.** Una papelera por tipo (nodos, archivos) con "Restaurar", y en el historial de cada nodo un "Volver a esta versión" que crea un nuevo cambio hacia adelante (nunca reescribe el pasado). Restaurar un nodo cuyo padre también fue borrado restaura primero al padre, o lo cuelga de la raíz si el usuario lo prefiere.
+- **Respaldo aparte.** El log protege contra errores de uso; no reemplaza el respaldo de la base ante fallas técnicas. Ambos son necesarios.
+
+Implementación sugerida en MongoDB: colección `log` con índices por `(coleccion, docId, fecha)` y por `loteId`; escritura del registro y del documento en la misma transacción. Alternativa si el volumen crece: *change streams* de MongoDB volcados a la colección `log`, que garantizan no perder ninguna operación aunque se escriba desde varios servicios.
+
 ---
 
 ## 8. Anotado para el futuro (fuera de alcance ahora)
 
 - Login, roles y permisos. Nota de diseño: los permisos también pueden ser definibles (por tipo de nodo, por campo, por rama del árbol) y guardarse en la misma colección de definición.
 - Almacenamiento físico de archivos y visor integrado.
-- Auditoría con usuario, IP y sesión.
+- Auditoría con usuario, IP y sesión (el log de 7.4 ya reserva el campo `usuario`).
 - Multiempresa (`tenantId`).
 - Notificaciones y avisos por fecha límite.
 - Concurrencia: dos personas editando el mismo nodo (versión optimista por documento).
