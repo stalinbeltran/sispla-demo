@@ -173,7 +173,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const slug=s=>(String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''))||'campo';
 const hoy=()=>new Date().toISOString().slice(0,10);
 /* ---- Vocabulario fijo del sistema (viene programado; no se define desde las pantallas) ---- */
-const TIPOS_CAMPO={texto:'Texto',textolargo:'Texto largo',numero:'Número',fecha:'Fecha',lista:'Lista desplegable',radio:'Botones de opción',checkbox:'Casilla (sí/no)',multiple:'Selección múltiple',referencia:'Referencia a otro nodo'};
+const TIPOS_CAMPO={texto:'Texto',textolargo:'Texto largo',numero:'Número',fecha:'Fecha',lista:'Lista desplegable',radio:'Botones de opción',checkbox:'Casilla (sí/no)',multiple:'Selección múltiple',referencia:'Referencia a otro nodo',archivo:'Archivo adjunto'};
 const TIPOS_CAMPO_DESC={
  texto:'Una sola línea de texto libre: nombres, códigos, correos, montos con formato propio.',
  textolargo:'Varias líneas de texto: descripciones, observaciones, alcance.',
@@ -183,7 +183,8 @@ const TIPOS_CAMPO_DESC={
  radio:'Igual que la lista desplegable, pero todas las opciones se ven a la vez y se marca una sola (botones de opción). Conviene cuando hay 2 a 5 opciones.',
  checkbox:'Una única casilla sí/no. Se guarda como verdadero o falso. En una condición "mostrar solo si" se compara con el texto true o false.',
  multiple:'Varias casillas de las que se pueden marcar varias a la vez. Se guarda como lista de valores (por ejemplo ["planos","acta"]).',
- referencia:'Un desplegable con los nodos que ya existen en el árbol (por ejemplo, la tarea de la que depende esta). Guarda el identificador del nodo elegido y se muestra como enlace.'
+ referencia:'Un desplegable con los nodos que ya existen en el árbol (por ejemplo, la tarea de la que depende esta). Guarda el identificador del nodo elegido y se muestra como enlace.',
+ archivo:'Un lugar dentro de la ficha para adjuntar uno o más archivos con un significado concreto ("Contrato firmado", "Acta de entrega"). Los archivos se guardan en la colección de archivos con la clave de este campo, y también se ven en la pestaña Archivos del nodo. Admite condiciones "mostrar solo si" como cualquier campo.'
 };
 const MENU_TIPOS={
  arbol:{label:'Árbol de proyectos',desc:'Abre la vista principal: el árbol con todos los proyectos y todo lo que contienen. No necesita destino.'},
@@ -205,7 +206,9 @@ const TIP={
  creado:'Fecha en que se creó el nodo. La pone el sistema; no se edita.',
  tabDatos:'La ficha del nodo. Los campos que ves aquí NO están programados: salen de la pantalla (formulario) asignada a este tipo de nodo. Con el botón ámbar "Diseñar esta pantalla" puedes agregar, quitar o cambiar campos.',
  tabHijos:'Los nodos que cuelgan de este ("internos"). Qué tipos pueden ir aquí se define en Tipos de nodo › "Puede contener". Un proyecto puede contener proyectos, y una etapa otras etapas, sin límite de profundidad.',
- tabArchivos:'Constancias adjuntas a este nodo: documentos y correos entregados por las partes. En la demo no se sube el archivo real; solo se registra su nombre, tamaño y datos.',
+ tabArchivos:'Constancias adjuntas a este nodo: documentos y correos entregados por las partes. Esta pestaña aparece solo si el tipo de nodo tiene marcado "Admite archivos adjuntos" en Tipos de nodo. Reúne tanto los archivos generales (registrados aquí) como los adjuntados desde un campo de tipo "Archivo adjunto" de la ficha. En la demo no se sube el archivo real; solo se registra su nombre, tamaño y datos.',
+ tArchivos:'Si está marcado, los nodos de este tipo muestran la pestaña "Archivos" donde se registran constancias generales (documentos y emails). Puedes empezar con archivos solo en etapas y activarlos en proyectos más adelante: los archivos ya registrados nunca se pierden al desmarcar, solo dejan de mostrarse. Para un archivo con significado propio dentro de la ficha (por ejemplo "Contrato firmado"), usa además un campo de tipo "Archivo adjunto" en la pantalla.',
+ aCampo:'En qué lugar del nodo está el archivo. "General" = registrado en esta pestaña. Un nombre de campo = adjuntado desde ese campo de tipo "Archivo adjunto" en la ficha.',
  tabHistorial:'Registro automático de cada cambio hecho en la ficha: qué campo cambió, valor anterior y nuevo, y cuándo. Se genera al guardar comparando la ficha vieja con la nueva. No se edita ni se borra.',
  renombrar:'Cambiar el nombre del nodo. El cambio queda registrado en el historial.',
  eliminar:'Elimina este nodo y TODO lo que contiene (sus internos y sus archivos). En el sistema real esto debería ir a una papelera; en la demo es definitivo.',
@@ -296,9 +299,9 @@ const q=t=>`<span class="q" tabindex="0" data-tip="${esc(t)}">?</span>`;
 function seed(){return{
  meta:{
   tipos:[
-   {id:'proyecto',nombre:'Proyecto',icono:'▣',formId:'f_proyecto',hijos:['proyecto','etapa'],columnas:['estado','responsable','fecha_fin']},
-   {id:'etapa',nombre:'Etapa',icono:'◆',formId:'f_etapa',hijos:['etapa','tarea'],columnas:['estado','avance','fecha_fin']},
-   {id:'tarea',nombre:'Tarea',icono:'▸',formId:'f_tarea',hijos:[],columnas:['estado','prioridad','responsable','fecha_limite']}
+   {id:'proyecto',nombre:'Proyecto',icono:'▣',formId:'f_proyecto',hijos:['proyecto','etapa'],columnas:['estado','responsable','fecha_fin'],archivos:true},
+   {id:'etapa',nombre:'Etapa',icono:'◆',formId:'f_etapa',hijos:['etapa','tarea'],columnas:['estado','avance','fecha_fin'],archivos:true},
+   {id:'tarea',nombre:'Tarea',icono:'▸',formId:'f_tarea',hijos:[],columnas:['estado','prioridad','responsable','fecha_limite'],archivos:true}
   ],
   formularios:{
    f_proyecto:{id:'f_proyecto',nombre:'Ficha de proyecto',campos:[
@@ -311,6 +314,7 @@ function seed(){return{
     {key:'presupuesto',label:'Presupuesto (USD)',tipo:'numero',visible:true,ancho:'half'},
     {key:'tiene_contrato',label:'Tiene contrato firmado',tipo:'checkbox',visible:true,ancho:'half'},
     {key:'nro_contrato',label:'N° de contrato',tipo:'texto',visible:true,ancho:'half',visibleSi:{campo:'tiene_contrato',valor:'true'},ayuda:'Solo se muestra si hay contrato firmado'},
+    {key:'contrato_firmado',label:'Contrato firmado (archivo)',tipo:'archivo',visible:true,ancho:'full',visibleSi:{campo:'tiene_contrato',valor:'true'},ayuda:'Adjunta aquí el contrato; también aparece en la pestaña Archivos'},
     {key:'descripcion',label:'Descripción / alcance',tipo:'textolargo',visible:true,ancho:'full'}
    ]},
    f_etapa:{id:'f_etapa',nombre:'Ficha de etapa',campos:[
@@ -368,7 +372,7 @@ function seed(){return{
    {id:'p3',tipo:'proyecto',parentId:null,codigo:'PRJ-002',nombre:'Auditoría contractual 2026',creado:'2026-08-15',datos:{cliente:'Minera Cóndor',estado:'planificado',responsable:'S. Beltrán',area:'legal',fecha_inicio:'2026-10-05',presupuesto:45000,tiene_contrato:false,descripcion:'Revisión de contratos vigentes y cartas de garantía.'}}
   ],
   archivos:[
-   {id:'a1',nodoId:'p1',nombre:'Contrato CT-2026-014 firmado.pdf',clase:'documento',tamano:1843210,fecha:'2026-03-05',origen:'Cliente'},
+   {id:'a1',nodoId:'p1',campoKey:'contrato_firmado',nombre:'Contrato CT-2026-014 firmado.pdf',clase:'documento',tamano:1843210,fecha:'2026-03-05',origen:'Cliente'},
    {id:'a2',nodoId:'p1',nombre:'RE: Entrega de planos rev. B.eml',clase:'email',tamano:48210,fecha:'2026-08-21',origen:'Cliente',email:{de:'j.rojas@andinas.pe',para:'m.quispe@sispla.pe',asunto:'RE: Entrega de planos rev. B',fechaEnvio:'2026-08-21'}},
    {id:'a3',nodoId:'e2',nombre:'Acta de inicio de obra.pdf',clase:'documento',tamano:522000,fecha:'2026-04-20',origen:'Contratista'},
    {id:'a4',nodoId:'t4',nombre:'Observaciones a planos rev. B.eml',clase:'email',tamano:31000,fecha:'2026-08-28',origen:'Cliente',email:{de:'j.rojas@andinas.pe',para:'m.quispe@sispla.pe',asunto:'Observaciones a planos rev. B',fechaEnvio:'2026-08-28'}}
@@ -411,7 +415,9 @@ function campoDe(tid,key){return formDeTipo(tid)?.campos.find(c=>c.key===key)}
 function fmtNum(n){return Number(n).toLocaleString('es-PE')}
 function fmtBytes(b){return b>1e6?(b/1e6).toFixed(1)+' MB':Math.round(b/1e3)+' KB'}
 function chip(f,v){const o=etiquetaOpcion(f,v);return `<span class="chip"><i style="background:${esc(o.color||'var(--muted)')}"></i>${esc(o.etiqueta)}</span>`}
-function mostrarValor(f,v){
+const archivosCampo=(nodoId,key)=>S.datos.archivos.filter(a=>a.nodoId===nodoId&&a.campoKey===key);
+function mostrarValor(f,v,n){
+ if(f.tipo==='archivo'){const k=n?archivosCampo(n.id,f.key).length:0;return k?`${k} archivo${k>1?'s':''}`:'<span class="note">—</span>'}
  if(v===undefined||v===null||v==='')return '<span class="note">—</span>';
  switch(f.tipo){
   case 'lista':case 'radio':return chip(f,v);
@@ -462,20 +468,21 @@ function vNodo(id,tab){
  const t=tipo(n.tipo);const f=form(t.formId);
  const crumbs=`<a href="#/arbol">Proyectos</a>`+ancestros(id).map(a=>`<span class="sep">›</span><a href="#/nodo/${a.id}">${esc(a.nombre)}</a>`).join('')+`<span class="sep">›</span><span class="cur">${esc(n.nombre)}</span>`;
  setTop(crumbs,designBtn('#/form/'+t.formId));
+ const admiteArchivos=t.archivos!==false;if(tab==='archivos'&&!admiteArchivos)tab='datos';
  const nh=hijos(id).length,na=archivosDe(id).length,nhi=S.datos.historial.filter(h=>h.nodoId===id).length;
- const tabs=[['datos','Datos','',TIP.tabDatos],['hijos','Internos',nh,TIP.tabHijos],['archivos','Archivos',na,TIP.tabArchivos],['historial','Historial',nhi,TIP.tabHistorial]].map(([k,l,c,tp])=>`<a href="#/nodo/${id}/${k}" class="${tab===k?'on':''}" data-tip="${esc(tp)}">${l}${c!==''?`<span class="n">${c}</span>`:''}</a>`).join('');
+ const tabs=[['datos','Datos','',TIP.tabDatos],['hijos','Internos',nh,TIP.tabHijos],...(admiteArchivos?[['archivos','Archivos',na,TIP.tabArchivos]]:[]),['historial','Historial',nhi,TIP.tabHistorial]].map(([k,l,c,tp])=>`<a href="#/nodo/${id}/${k}" class="${tab===k?'on':''}" data-tip="${esc(tp)}">${l}${c!==''?`<span class="n">${c}</span>`:''}</a>`).join('');
  let body='';
  if(tab==='datos'){
-  body=`<div class="card"><h2>${esc(f.nombre)} ${q('Nombre de la pantalla (formulario) que define esta ficha. Los campos de abajo salen de esa definición, no del código. Se cambia con el botón ámbar "Diseñar esta pantalla".')}</h2>${renderForm(f,n.datos)}<div class="actions"><button class="btn" onclick="location.hash='#/arbol'">Cancelar</button><button class="btn pri" onclick="A.guardarNodo('${id}')" data-tip="Guarda la ficha. Valida los campos requeridos, compara valor por valor con lo anterior y registra cada diferencia en la pestaña Historial.">Guardar</button></div></div>`;
+  body=`<div class="card"><h2>${esc(f.nombre)} ${q('Nombre de la pantalla (formulario) que define esta ficha. Los campos de abajo salen de esa definición, no del código. Se cambia con el botón ámbar "Diseñar esta pantalla".')}</h2>${renderForm(f,n.datos,'c_',id)}<div class="actions"><button class="btn" onclick="location.hash='#/arbol'">Cancelar</button><button class="btn pri" onclick="A.guardarNodo('${id}')" data-tip="Guarda la ficha. Valida los campos requeridos, compara valor por valor con lo anterior y registra cada diferencia en la pestaña Historial.">Guardar</button></div></div>`;
  }else if(tab==='hijos'){
   const secs=t.hijos.map(ht=>{const th=tipo(ht);if(!th)return '';const hs=hijos(id).filter(x=>x.tipo===ht);const cols=(th.columnas||[]).map(k=>campoDe(ht,k)).filter(Boolean);
    return `<div class="card"><div class="page-head" style="margin-bottom:10px"><h2>${esc(th.nombre)}s internos ${q(`Nodos de tipo "${th.nombre}" que cuelgan directamente de este. Esta sección existe porque en Tipos de nodo se marcó que "${t.nombre}" puede contener "${th.nombre}". Las columnas son las elegidas en Tipos de nodo › Columnas en los listados.`)}</h2><button class="btn sm pri" onclick="A.nuevoNodo('${id}','${ht}')" data-tip="Crea un nodo de tipo ${esc(th.nombre)} dentro de este. Recibe un código jerárquico automático y se abre su ficha vacía.">+ Nueva ${esc(th.nombre.toLowerCase())}</button></div>
-   ${hs.length?`<div class="tbl-wrap"><table><thead><tr><th>Código</th><th>Nombre</th>${cols.map(c=>`<th class="${c.tipo==='numero'?'num':''}">${esc(c.label)}</th>`).join('')}<th>Internos</th></tr></thead><tbody>${hs.map(h=>`<tr><td class="code">${esc(h.codigo)}</td><td><a href="#/nodo/${h.id}">${esc(h.nombre)}</a></td>${cols.map(c=>`<td class="${c.tipo==='numero'?'num':''}">${mostrarValor(c,h.datos[c.key])}</td>`).join('')}<td class="num">${hijos(h.id).length||''}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin registros.</div>'}
+   ${hs.length?`<div class="tbl-wrap"><table><thead><tr><th>Código</th><th>Nombre</th>${cols.map(c=>`<th class="${c.tipo==='numero'?'num':''}">${esc(c.label)}</th>`).join('')}<th>Internos</th></tr></thead><tbody>${hs.map(h=>`<tr><td class="code">${esc(h.codigo)}</td><td><a href="#/nodo/${h.id}">${esc(h.nombre)}</a></td>${cols.map(c=>`<td class="${c.tipo==='numero'?'num':''}">${mostrarValor(c,h.datos[c.key],h)}</td>`).join('')}<td class="num">${hijos(h.id).length||''}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin registros.</div>'}
    <div class="note" style="margin-top:8px">Las columnas de este listado se definen en <a href="#/tipos">Tipos de nodo › ${esc(th.nombre)}</a>.</div></div>`}).join('');
   body=`<div class="stack">${secs||'<div class="card empty">Este tipo de nodo no admite internos. Puedes cambiarlo en <a href="#/tipos">Tipos de nodo</a>.</div>'}</div>`;
  }else if(tab==='archivos'){
   const as=archivosDe(id);
-  body=`<div class="stack"><div class="card"><h2>Constancias adjuntas ${q(TIP.tabArchivos)}</h2>${as.length?`<div class="tbl-wrap"><table><thead><tr><th>Archivo</th><th>Clase ${q(TIP.aClase)}</th><th>Detalle ${q('Para emails: remitente → destinatario y asunto. Para documentos queda vacío.')}</th><th>Origen ${q(TIP.aOrigen)}</th><th>Fecha ${q(TIP.aFecha)}</th><th class="num">Tamaño</th><th></th></tr></thead><tbody>${as.map(a=>`<tr><td><a href="#" onclick="return false" data-tip="En el sistema real abriría o descargaría el archivo. En la demo no hay archivo físico.">${esc(a.nombre)}</a></td><td>${a.clase==='email'?'<span class="badge">Email</span>':'<span class="badge">Documento</span>'}</td><td class="note">${a.email?`${esc(a.email.de)} → ${esc(a.email.para)}<br>${esc(a.email.asunto)}`:''}</td><td>${esc(a.origen||'')}</td><td>${esc(a.fecha)}</td><td class="num">${fmtBytes(a.tamano)}</td><td><button class="btn sm danger" onclick="A.borrarArchivo('${a.id}')" data-tip="${esc(TIP.aQuitar)}">Quitar</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin archivos registrados.</div>'}</div>
+  body=`<div class="stack"><div class="card"><h2>Constancias adjuntas ${q(TIP.tabArchivos)}</h2><div class="note" style="margin-bottom:8px">Esta pestaña existe porque el tipo <b>${esc(t.nombre)}</b> tiene marcado "Admite archivos adjuntos" en <a href="#/tipos">Tipos de nodo</a>. Los archivos con un campo asignado se adjuntaron desde la ficha.</div>${as.length?`<div class="tbl-wrap"><table><thead><tr><th>Archivo</th><th>Campo ${q(TIP.aCampo)}</th><th>Clase ${q(TIP.aClase)}</th><th>Detalle ${q('Para emails: remitente → destinatario y asunto. Para documentos queda vacío.')}</th><th>Origen ${q(TIP.aOrigen)}</th><th>Fecha ${q(TIP.aFecha)}</th><th class="num">Tamaño</th><th></th></tr></thead><tbody>${as.map(a=>`<tr><td><a href="#" onclick="return false" data-tip="En el sistema real abriría o descargaría el archivo. En la demo no hay archivo físico.">${esc(a.nombre)}</a></td><td>${a.campoKey?`<span class="badge" data-tip="${esc(TIP.aCampo)}">${esc(campoDe(n.tipo,a.campoKey)?.label||a.campoKey+' (ya no está en la pantalla)')}</span>`:'<span class="note">General</span>'}</td><td>${a.clase==='email'?'<span class="badge">Email</span>':'<span class="badge">Documento</span>'}</td><td class="note">${a.email?`${esc(a.email.de)} → ${esc(a.email.para)}<br>${esc(a.email.asunto)}`:''}</td><td>${esc(a.origen||'')}</td><td>${esc(a.fecha)}</td><td class="num">${fmtBytes(a.tamano)}</td><td><button class="btn sm danger" onclick="A.borrarArchivo('${a.id}')" data-tip="${esc(TIP.aQuitar)}">Quitar</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sin archivos registrados.</div>'}</div>
   <div class="card"><h2>Registrar constancia ${q('Deja constancia de un documento o correo entregado por alguna de las partes, asociado a este nodo. Estos campos son fijos del sistema (no salen de una pantalla definible), porque el manejo de archivos es una función base.')}</h2><div class="form-grid">
    <div class="fld full"><label for="up_file">Archivo ${q(TIP.aArchivo)}</label><input type="file" id="up_file" onchange="A.upName(this)"><div class="help">En el demo no se sube nada: solo se registra nombre y tamaño.</div></div>
    <div class="fld half"><label for="up_nombre">Nombre ${q(TIP.aNombre)}</label><input type="text" id="up_nombre"></div>
@@ -496,11 +503,13 @@ function vNodo(id,tab){
 }
 
 /* ============ formulario dinámico ============ */
-function renderForm(f,data,pre='c_'){
+function renderForm(f,data,pre='c_',nodoId){
  return `<div class="form-grid" id="dynform">`+f.campos.filter(c=>c.visible!==false).map(c=>{
   const id=pre+c.key,v=data[c.key];let ctl='';
   const at=`id="${id}" name="${c.key}"`;
   switch(c.tipo){
+   case 'archivo':{const as=nodoId?archivosCampo(nodoId,c.key):[];
+    ctl=`<div class="opts" style="flex-direction:column;align-items:flex-start;gap:6px">${as.map(a=>`<span class="chip" data-tip="${esc(`Archivo adjuntado desde el campo "${c.label}". También figura en la pestaña Archivos.`)}">📎 ${esc(a.nombre)} <span class="note">· ${fmtBytes(a.tamano)} · ${esc(a.fecha)}</span> <button class="btn ghost sm" onclick="A.borrarArchivo('${a.id}')" style="padding:0 4px" data-tip="Quita este archivo del campo.">✕</button></span>`).join('')}${nodoId?`<label class="btn sm" data-tip="Adjunta un archivo a este campo. Se registra de inmediato (no hace falta pulsar Guardar) y queda anotado en el historial. En la demo solo se registran nombre y tamaño.">＋ Adjuntar archivo <input type="file" ${at} style="display:none" onchange="A.adjuntarCampo('${nodoId}','${c.key}',this)"></label>`:`<span class="note">(aquí el usuario adjunta archivos; se muestran como chips)</span>`}</div>`;break}
    case 'textolargo':ctl=`<textarea ${at}>${esc(v)}</textarea>`;break;
    case 'numero':ctl=`<input type="number" ${at} value="${esc(v)}">`;break;
    case 'fecha':ctl=`<input type="date" ${at} value="${esc(v)}">`;break;
@@ -517,7 +526,7 @@ function renderForm(f,data,pre='c_'){
 }
 function leerForm(f){
  const root=document.getElementById('dynform');if(!root)return {};const out={};
- f.campos.filter(c=>c.visible!==false).forEach(c=>{
+ f.campos.filter(c=>c.visible!==false&&c.tipo!=='archivo').forEach(c=>{
   if(c.tipo==='radio'){const r=root.querySelector(`input[name="${c.key}"]:checked`);out[c.key]=r?r.value:''}
   else if(c.tipo==='multiple'){out[c.key]=[...root.querySelectorAll(`input[name="${c.key}"]:checked`)].map(i=>i.value)}
   else if(c.tipo==='checkbox'){out[c.key]=!!root.querySelector(`[name="${c.key}"]`)?.checked}
@@ -537,7 +546,7 @@ function vLista(tid){
  setTop(`<span class="cur">${esc(t.nombre)}s</span>`,designBtn('#/form/'+t.formId));
  const cols=(t.columnas||[]).map(k=>campoDe(tid,k)).filter(Boolean);const ns=S.datos.nodos.filter(n=>n.tipo===tid);
  view(`<div class="page-head"><div><h1>Todas las ${esc(t.nombre.toLowerCase())}s ${q(`Listado de todos los nodos de tipo "${t.nombre}" sin importar dónde estén en el árbol. Esta pantalla existe porque una opción del menú es de tipo "Listado de un tipo" con destino "${t.nombre}". Las columnas se eligen en Tipos de nodo.`)}</h1><div class="meta">${ns.length} registros en cualquier nivel del árbol.</div></div></div>
- <div class="card tbl-wrap"><table><thead><tr><th>Código ${q(TIP.codigo)}</th><th>Nombre</th><th>Ubicación ${q(TIP.ubicacion)}</th>${cols.map(c=>`<th class="${c.tipo==='numero'?'num':''}">${esc(c.label)}</th>`).join('')}</tr></thead><tbody>${ns.map(n=>`<tr><td class="code">${esc(n.codigo)}</td><td><a href="#/nodo/${n.id}">${esc(n.nombre)}</a></td><td class="note">${esc(rutaStr(n.id))}</td>${cols.map(c=>`<td class="${c.tipo==='numero'?'num':''}">${mostrarValor(c,n.datos[c.key])}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="9" class="empty">Sin registros.</td></tr>'}</tbody></table></div>`);
+ <div class="card tbl-wrap"><table><thead><tr><th>Código ${q(TIP.codigo)}</th><th>Nombre</th><th>Ubicación ${q(TIP.ubicacion)}</th>${cols.map(c=>`<th class="${c.tipo==='numero'?'num':''}">${esc(c.label)}</th>`).join('')}</tr></thead><tbody>${ns.map(n=>`<tr><td class="code">${esc(n.codigo)}</td><td><a href="#/nodo/${n.id}">${esc(n.nombre)}</a></td><td class="note">${esc(rutaStr(n.id))}</td>${cols.map(c=>`<td class="${c.tipo==='numero'?'num':''}">${mostrarValor(c,n.datos[c.key],n)}</td>`).join('')}</tr>`).join('')||'<tr><td colspan="9" class="empty">Sin registros.</td></tr>'}</tbody></table></div>`);
 }
 
 /* ============ diseño: formularios ============ */
@@ -577,6 +586,7 @@ function vTipos(){
  S.meta.tipos.map((t,i)=>{const f=form(t.formId);const cnt=S.datos.nodos.filter(n=>n.tipo===t.id).length;
   return `<div class="card"><div class="page-head" style="margin-bottom:12px"><div class="line" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><input type="text" id="ti_${t.id}" value="${esc(t.icono)}" style="width:44px;text-align:center" oninput="A.tSet(${i},'icono',this.value)" aria-label="Ícono" data-tip="${esc(TIP.tIcono)}"><input type="text" id="tn_${t.id}" value="${esc(t.nombre)}" style="font-weight:600;font-size:16px" oninput="A.tSet(${i},'nombre',this.value)" aria-label="Nombre del tipo" data-tip="${esc(TIP.tNombre)}"><span class="code" data-tip="${esc(TIP.tId)}">${t.id}</span><span class="note" data-tip="Cuántos nodos de este tipo existen hoy en el árbol. Mientras haya alguno, el tipo no se puede quitar.">${cnt} registros</span></div>${cnt?'':`<button class="btn sm danger" onclick="A.tDel(${i})" data-tip="${esc(TIP.tQuitar)}">Quitar tipo</button>`}</div>
   <div class="form-grid"><div class="fld half"><label for="tf_${t.id}">Pantalla que usa ${q(TIP.tForm)}</label><div class="line" style="display:flex;gap:8px"><select id="tf_${t.id}" onchange="A.tSet(${i},'formId',this.value,true)" data-tip="${esc(TIP.tForm)}">${Object.values(S.meta.formularios).map(x=>`<option value="${x.id}" ${x.id===t.formId?'selected':''}>${esc(x.nombre)}</option>`).join('')}</select><a class="btn sm design" href="#/form/${t.formId}" data-tip="${esc(TIP.btnDisenar)}">Diseñar</a></div></div>
+  <div class="fld half"><label>Archivos adjuntos ${q(TIP.tArchivos)}</label><div class="opts"><label data-tip="${esc(TIP.tArchivos)}"><input type="checkbox" id="ta_${t.id}" ${t.archivos!==false?'checked':''} onchange="A.tSet(${i},'archivos',this.checked)">Admite archivos adjuntos (pestaña Archivos)</label></div><div class="help">Para archivos con significado propio dentro de la ficha, agrega un campo "Archivo adjunto" en la pantalla.</div></div>
   <div class="fld half"><label>Puede contener ${q(TIP.tHijos)}</label><div class="opts">${S.meta.tipos.map(o=>`<label data-tip="${esc(`Si está marcado, dentro de un nodo "${t.nombre}" se podrá crear un nodo "${o.nombre}"${o.id===t.id?' (anidado en sí mismo, sin límite de profundidad)':''}.`)}"><input type="checkbox" id="th_${t.id}_${o.id}" ${t.hijos.includes(o.id)?'checked':''} onchange="A.tHijo(${i},'${o.id}',this.checked)">${esc(o.nombre)}</label>`).join('')}</div></div>
   <div class="fld full"><label>Columnas en los listados ${q(TIP.tCols)}</label><div class="opts">${(f?f.campos:[]).map(c=>`<label data-tip="${esc(`Campo "${c.label}" de la pantalla ${f.nombre}. Marcado = aparece como columna en los listados de ${t.nombre}.`)}"><input type="checkbox" id="tc_${t.id}_${c.key}" ${(t.columnas||[]).includes(c.key)?'checked':''} onchange="A.tCol(${i},'${c.key}',this.checked)">${esc(c.label)}</label>`).join('')||'<span class="note">La pantalla no tiene campos.</span>'}</div></div></div></div>`}).join('')+`</div>`);
 }
@@ -637,7 +647,7 @@ function vReporte(rid,mode){
  const base=[{key:'codigo',label:'Código'},{key:'nombre',label:'Nombre'},{key:'ruta',label:'Ubicación'}];
  const cols=r.campos.map(k=>base.find(b=>b.key===k)||f?.campos.find(c=>c.key===k)).filter(Boolean);
  const {ns,grupos}=ejecutarReporte(r);
- const celda=(n,c)=>{if(c.key==='codigo')return `<td class="code">${esc(n.codigo)}</td>`;if(c.key==='nombre')return `<td><a href="#/nodo/${n.id}">${esc(n.nombre)}</a></td>`;if(c.key==='ruta')return `<td class="note">${esc(rutaStr(n.id))}</td>`;return `<td class="${c.tipo==='numero'?'num':''}">${mostrarValor(c,n.datos[c.key])}</td>`};
+ const celda=(n,c)=>{if(c.key==='codigo')return `<td class="code">${esc(n.codigo)}</td>`;if(c.key==='nombre')return `<td><a href="#/nodo/${n.id}">${esc(n.nombre)}</a></td>`;if(c.key==='ruta')return `<td class="note">${esc(rutaStr(n.id))}</td>`;return `<td class="${c.tipo==='numero'?'num':''}">${mostrarValor(c,n.datos[c.key],n)}</td>`};
  const numCols=cols.filter(c=>c.tipo==='numero');
  const filas=Object.entries(grupos).map(([g,arr])=>{const fg=campoDe(r.tipo,r.agrupar);const head=r.agrupar?`<tr class="group-row"><td colspan="${cols.length}">${fg?mostrarValor(fg,g==='(sin valor)'?'':g):esc(g)} <span class="note">· ${arr.length} registro${arr.length!==1?'s':''}${numCols.map(c=>` · ${esc(c.label)}: ${fmtNum(arr.reduce((s,n)=>s+(Number(n.datos[c.key])||0),0))}`).join('')}</span></td></tr>`:'';return head+arr.map(n=>`<tr>${cols.map(c=>celda(n,c)).join('')}</tr>`).join('')}).join('');
  const dsg=design?`<div class="card"><h3>Definición ${q('Todo lo que define el reporte. Las alternativas de columnas, filtro y agrupación salen de la ficha del tipo elegido: si agregan un campo a la ficha, aparece aquí sin programar nada.')}</h3><div class="form-grid">
@@ -682,7 +692,7 @@ function vAyuda(){
   <dt>Columnas en los listados</dt><dd>${esc(TIP.tCols)}</dd>
   <dt>Opción de menú</dt><dd>Una entrada del menú lateral: texto, ícono, tipo de opción (fijo), destino (definible), subopción, visible.</dd>
   <dt>Reporte</dt><dd>Definición JSON con tipo de nodo, alcance, columnas, filtro y agrupación. El sistema la convierte en una consulta y muestra la tabla.</dd>
-  <dt>Constancia (archivo)</dt><dd>Documento o email adjunto a un nodo como evidencia de lo entregado por las partes.</dd>
+  <dt>Constancia (archivo)</dt><dd>Documento o email adjunto a un nodo como evidencia de lo entregado por las partes. Dónde se pueden adjuntar es definible en dos niveles: por tipo de nodo (Tipos de nodo › "Admite archivos adjuntos" enciende la pestaña Archivos) y por campo (un campo de tipo "Archivo adjunto" dentro de la ficha, con condiciones si hace falta). Un archivo adjuntado desde un campo también aparece en la pestaña Archivos con el nombre del campo.</dd>
   <dt>Historial</dt><dd>${esc(TIP.tabHistorial)}</dd>
   <dt>Código</dt><dd>${esc(TIP.codigo)}</dd>
   <dt>Ubicación / path</dt><dd>${esc(TIP.ubicacion)}</dd></dl></div>
@@ -717,7 +727,7 @@ const A={
  renombrar(id){const n=nodo(id);const v=prompt('Nuevo nombre:',n.nombre);if(v&&v!==n.nombre){hist(id,'nombre',n.nombre,v);n.nombre=v;save();refresh()}},
  borrarNodo(id){const n=nodo(id);const d=desc(id);if(!confirm(`¿Eliminar "${n.nombre}"${d.length?` y sus ${d.length} internos`:''}?`))return;const ids=new Set([id,...d.map(x=>x.id)]);S.datos.nodos=S.datos.nodos.filter(x=>!ids.has(x.id));S.datos.archivos=S.datos.archivos.filter(a=>!ids.has(a.nodoId));save();location.hash=n.parentId?'#/nodo/'+n.parentId+'/hijos':'#/arbol';toast('Eliminado')},
  guardarNodo(id){const n=nodo(id);const f=formDeTipo(n.tipo);const nuevo=leerForm(f);
-  const falta=f.campos.filter(c=>c.requerido&&c.visible!==false&&!document.querySelector(`.fld[data-key="${c.key}"]`)?.classList.contains('hidden')).find(c=>{const v=nuevo[c.key];return v===''||v===undefined||(Array.isArray(v)&&!v.length)});
+  const falta=f.campos.filter(c=>c.requerido&&c.visible!==false&&!document.querySelector(`.fld[data-key="${c.key}"]`)?.classList.contains('hidden')).find(c=>{if(c.tipo==='archivo')return !archivosCampo(id,c.key).length;const v=nuevo[c.key];return v===''||v===undefined||(Array.isArray(v)&&!v.length)});
   if(falta){toast(`Falta completar: ${falta.label}`);document.getElementById('c_'+falta.key)?.focus();return}
   f.campos.forEach(c=>{const a=n.datos[c.key],b=nuevo[c.key];if(JSON.stringify(a??'')!==JSON.stringify(b??'')){const sh=v=>c.tipo==='checkbox'?(v?'Sí':'No'):Array.isArray(v)?v.join(', '):(['lista','radio'].includes(c.tipo)&&v?etiquetaOpcion(c,v).etiqueta:String(v??''));hist(id,c.key,sh(a),sh(b))}});
   n.datos={...n.datos,...nuevo};save();refresh();toast('Guardado')},
@@ -726,6 +736,7 @@ const A={
  upClase(v){document.querySelectorAll('.fld.em').forEach(e=>e.classList.toggle('hidden',v!=='email'))},
  registrarArchivo(nodoId){const nombre=document.getElementById('up_nombre').value.trim();if(!nombre){toast('Indica el archivo o su nombre');return}const clase=document.getElementById('up_clase').value;const a={id:uid(),nodoId,nombre,clase,tamano:Number(document.getElementById('up_file').dataset.size||0),fecha:document.getElementById('up_fecha').value||hoy(),origen:document.getElementById('up_origen').value};if(clase==='email')a.email={de:document.getElementById('up_de').value,para:document.getElementById('up_para').value,asunto:document.getElementById('up_asunto').value,fechaEnvio:a.fecha};S.datos.archivos.push(a);hist(nodoId,'archivos','',nombre);save();refresh();toast('Constancia registrada')},
  borrarArchivo(id){if(!confirm('¿Quitar esta constancia?'))return;S.datos.archivos=S.datos.archivos.filter(a=>a.id!==id);save();refresh()},
+ adjuntarCampo(nodoId,key,inp){const fl=inp.files?.[0];if(!fl)return;const c=campoDe(nodo(nodoId).tipo,key);const a={id:uid(),nodoId,campoKey:key,nombre:fl.name,clase:/\.(eml|msg)$/i.test(fl.name)?'email':'documento',tamano:fl.size,fecha:hoy(),origen:''};S.datos.archivos.push(a);hist(nodoId,key,'',fl.name);save();refresh();toast(`Adjuntado a "${c?.label||key}"`)},
  /* formularios */
  nuevoForm(){const nombre=prompt('Nombre de la nueva pantalla:');if(!nombre)return;let id='f_'+slug(nombre);while(S.meta.formularios[id])id+='_';S.meta.formularios[id]={id,nombre,campos:[]};save();location.hash='#/form/'+id},
  fNombre(fid,v){form(fid).nombre=v;save()},

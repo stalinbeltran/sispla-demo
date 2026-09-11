@@ -33,8 +33,11 @@ Nombres de colección orientativos. Todo lo que aparece está implementado en el
 { "id": "etapa", "nombre": "Etapa", "icono": "◆",
   "formId": "f_etapa",
   "hijos": ["etapa", "tarea"],
-  "columnas": ["estado", "avance", "fecha_fin"] }
+  "columnas": ["estado", "avance", "fecha_fin"],
+  "archivos": true }
 ```
+
+`archivos` enciende o apaga la pestaña Archivos para todos los nodos de ese tipo.
 
 La jerarquía no es fija (Proyecto > Etapa > Tarea). Es un grafo de "quién puede contener a quién": un proyecto puede contener proyectos, una etapa puede contener etapas. La profundidad es ilimitada.
 
@@ -51,7 +54,7 @@ La jerarquía no es fija (Proyecto > Etapa > Tarea). Es un grafo de "quién pued
     "opciones": [ { "valor": "informe", "etiqueta": "Informe" } ] } ] }
 ```
 
-Tipos de campo del mock: texto, texto largo, número, fecha, lista desplegable, botones de opción, casilla sí/no, selección múltiple, referencia a otro nodo. Cada campo tiene: etiqueta, clave interna estable (`key`), requerido, visible, ancho, texto de ayuda, origen de opciones (lista compartida u opciones propias) y condición de visibilidad.
+Tipos de campo del mock: texto, texto largo, número, fecha, lista desplegable, botones de opción, casilla sí/no, selección múltiple, referencia a otro nodo, archivo adjunto. Cada campo tiene: etiqueta, clave interna estable (`key`), requerido, visible, ancho, texto de ayuda, origen de opciones (lista compartida u opciones propias) y condición de visibilidad.
 
 **`catalogos`** — listas de opciones reutilizables, con etiqueta, valor interno y color.
 
@@ -78,6 +81,21 @@ Tipos de campo del mock: texto, texto largo, número, fecha, lista desplegable, 
 `path` (ruta materializada de ancestros) permite traer un subárbol completo con una consulta (`path: "p1"`), que es lo que usan los reportes con alcance. El mock lo calcula al vuelo; en la implementación real se guarda.
 
 **`archivos`** — constancias. Nunca se borran físicamente (*futuro: papelera*).
+
+Dónde se pueden adjuntar es definible en dos niveles, y ambos pueden activarse o desactivarse en cualquier momento sin perder lo ya guardado:
+
+| Nivel | Se define en | Qué produce | Documento resultante |
+|---|---|---|---|
+| Por tipo de nodo | Tipos de nodo › "Admite archivos adjuntos" | La pestaña **Archivos** del nodo, para constancias generales | `campoKey` ausente |
+| Por campo | Pantalla › campo de tipo **Archivo adjunto** | Un lugar dentro de la ficha con significado propio ("Contrato firmado"), con condiciones como cualquier campo | `campoKey` = clave del campo |
+
+Ejemplo: el cliente arranca con archivos solo en etapas; meses después pide archivos en el proyecto. Se marca la casilla en el tipo Proyecto y la pestaña aparece en todos los proyectos. Si desmarca, los archivos siguen en la colección; solo dejan de mostrarse. La pestaña Archivos reúne ambos orígenes y muestra en una columna desde qué campo se adjuntó cada uno.
+
+```json
+{ "_id": "a1", "nodoId": "p1", "campoKey": "contrato_firmado", "clase": "documento",
+  "nombre": "Contrato CT-2026-014 firmado.pdf", "tamano": 1843210,
+  "fecha": "2026-03-05", "origen": "Cliente" }
+```
 
 ```json
 { "_id": "a2", "nodoId": "p1", "clase": "email",
@@ -175,7 +193,7 @@ Para cada una anoto lo que asumí en el mock. Si el supuesto vale, no hay que re
 
 **Sobre archivos y constancias**
 
-10. ¿Los archivos van solo en la pestaña del nodo, o también como campo de la ficha ("Contrato firmado: [archivo]")? *Asumí pestaña por nodo con clase Documento o Email.*
+10. ~~¿Los archivos van solo en la pestaña del nodo, o también como campo de la ficha?~~ **Resuelto (2026-09-11): ambos, y ambos definibles.** La pestaña se activa por tipo de nodo; el campo "Archivo adjunto" se coloca en cualquier pantalla. Ver sección 2.2.
 11. Para emails: ¿se sube el `.eml`/`.msg` y el sistema extrae de/para/asunto/fecha, o se registran a mano? *El mock lo registra a mano; la extracción automática es viable y recomendable.*
 12. ¿Versionado de archivos (mismo nombre, nueva versión) o cada subida es un registro nuevo?
 13. ¿Tamaño máximo, tipos permitidos, y dónde viven físicamente (disco del servidor, S3, GridFS)? *Se define al elegir tecnología; el modelo solo guarda una referencia.*
