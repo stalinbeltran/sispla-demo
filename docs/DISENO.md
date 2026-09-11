@@ -261,6 +261,15 @@ Principios:
 6. **`path` materializado como relación principal del árbol.** Permite subárbol completo, alcance de reportes y archivos heredados con una sola consulta. Si más adelante hacen falta preguntas de grafo profundas ("qué depende de qué a N saltos"), se evalúa `$graphLookup` primero; una base de grafos solo si no alcanza.
 7. **Colección genérica de relaciones como salida de emergencia.** Si un cliente necesita un vínculo que no cabe como campo de ficha (muchos a muchos con atributos propios), se usa una colección `relaciones` con `{ de, a, tipo, datos }`, también definible, sin cambiar el modelo.
 
+
+### 7.3 Árbol de proyectos: orden, paginación y búsqueda por título
+
+El árbol es el mismo componente en la página Proyectos (a todo el ancho) y en el panel que acompaña a cada ficha. Reglas fijadas el 2026-09-11, ya implementadas en el mock:
+
+- **Los proyectos más recientes van arriba.** Las raíces se ordenan por fecha de creación descendente (empate: código descendente). Los internos de un nodo conservan su orden de creación.
+- **Paginación solo en el nivel raíz.** Las raíces son independientes entre sí y se muestran de a 10 por página. Los internos de un proyecto nunca se paginan: una vez desplegado, la rama se ve completa. Al abrir un nodo, el árbol se coloca en la página donde está su proyecto raíz. En la implementación real la consulta es `{ parentId: null }` con `sort creado desc`, `skip` y `limit`; el subárbol se trae aparte con `path`.
+- **Búsqueda por título desde el árbol.** Junto a los iconos de desplegar y plegar hay una lupa que abre una caja de búsqueda. Busca en el `nombre` de todos los nodos de todos los proyectos, en todos los niveles, sin distinguir mayúsculas ni tildes. Muestra solo las coincidencias con sus ancestros desplegados y el término resaltado; mientras se busca no hay paginación. Es el primer escalón de la búsqueda global de 7.1: la misma caja crecerá para cubrir campos, archivos e historial, y el resultado mixto de 7.1 se presentará con esta misma forma de árbol filtrado.
+
 ---
 
 ## 8. Anotado para el futuro (fuera de alcance ahora)
