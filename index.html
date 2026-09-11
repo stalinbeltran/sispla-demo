@@ -302,22 +302,25 @@ function genNodos(){
  const pick=a=>a[Math.floor(rnd()*a.length)];const ri=(a,b)=>a+Math.floor(rnd()*(b-a+1));
  const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
  const fr=(base,dias)=>{const d=new Date(base+'T00:00:00');d.setDate(d.getDate()+dias);return d.toISOString().slice(0,10)};
- const NOMBRES=['Auditoría contractual 2026','Ramal de agua potable Sector 7','Reforzamiento estructural Pabellón B','Nueva línea de empaque','Centro de distribución Lurín','Modernización de red eléctrica','Planta de tratamiento de efluentes','Techado de almacén 3','Puente peatonal Av. Industrial','Sistema contra incendios Torre A','Reubicación de taller de mantenimiento','Pavimentación de acceso principal','Estacionamiento subterráneo','Cambio de cubierta nave 2','Instalación de paneles solares','Adecuación de laboratorio','Muro de contención Zona Sur','Rehabilitación de cisternas','Habilitación urbana Etapa II','Ampliación de comedor industrial','Tendido de fibra óptica','Cerco perimétrico y garitas'];
- const CLIENTES=['Industrias Andinas S.A.','Minera Cóndor','Municipalidad de Surco','Agroexportadora del Valle','Puerto Callao Logistics','Clínica San Martín','Textiles Pacífico','EPS Aguas del Norte','Universidad Continental','Hotel Costa Verde','Cementos Lima','Pesquera Austral','Inmobiliaria Los Portales'];
- const ETAPAS=['Diagnóstico','Expediente técnico','Licitación','Ejecución','Supervisión','Cierre y liquidación','Permisos y licencias','Procura de equipos','Pruebas y puesta en marcha'];
- const SUBETAPAS=['Obras civiles','Instalaciones eléctricas','Instalaciones sanitarias','Acabados','Montaje mecánico'];
- const TAREAS=['Levantamiento topográfico','Revisión de planos','Cotización de materiales','Acta de reunión con cliente','Informe mensual de avance','Valorización N° 3','Aprobación de adicional','Inspección de seguridad','Entrega de dossier de calidad','Coordinación con supervisión','Gestión de permisos municipales','Verificación de metrados','Prueba hidráulica','Capacitación al personal'];
- const SUBPROY=['Subestación eléctrica','Sistema de bombeo','Oficinas temporales','Vía de acceso'];
+ /* Los primeros 9 nombres (y sus sponsor / project manager) son los del SISPLA actual de la AIG; los demás son inventados en el mismo rubro */
+ const NOMBRES=[['Sin Especificar','sin_especificar','sin_especificar'],['Recursos Humanos','oirh','oirh'],['Interoperabilidad y Bus de Servicio','dici','dici'],['Medición','dici','dici'],['Plan contra Desastre e Inventario','dti','dti'],['Digitalización','despacho_superior','ciencias_informacion'],['Transporte','director','director'],['Hub de Datos','direccion_ciencias_informacion','director'],['Ciberseguridad','director','director'],
+  ['Firma Electrónica','di','di'],['Portal de Trámites en Línea','dici','di'],['Nube Gubernamental','dti','dti'],['Identidad Digital','despacho_superior','dici'],['Centro de Datos','dti','director'],['Mesa de Ayuda','dti','dti'],['Gestión Documental','director','dici'],['Correo Institucional','dti','dti'],['Inventario de Activos TI','dti','dti'],['Capacitación en Ciberseguridad','oirh','director'],['Telefonía IP','dti','dti'],['Red Nacional Multiservicios','dici','dti'],['Panamá Digital','despacho_superior','director']];
+ const CLIENTES=['AIG','Ministerio de Economía y Finanzas','Caja de Seguro Social','Registro Público','Tribunal Electoral','Ministerio de Salud','Autoridad del Canal','Municipio de Panamá','Contraloría General','Ministerio de Educación'];
+ const ETAPAS=['Levantamiento de requerimientos','Diseño','Desarrollo','Pruebas','Capacitación','Puesta en producción','Cierre','Adquisiciones','Análisis de riesgos'];
+ const SUBETAPAS=['Módulo de seguridad','Integración con entidades','Migración de datos','Interfaz de usuario','Infraestructura'];
+ const TAREAS=['Acta de reunión con el sponsor','Informe mensual de avance','Revisión de casos de uso','Configuración de servidores','Pruebas de aceptación','Capacitación a usuarios','Solicitud de cambio N° 3','Respaldo y plan de contingencia','Documentación técnica','Gestión de accesos','Validación con la entidad','Publicación en producción','Análisis de vulnerabilidades','Elaboración de manual de usuario'];
+ const SUBPROY=['Portal ciudadano','App móvil','Mesa de ayuda','Integración con entidades'];
  const RESP=['M. Quispe','L. Paredes','A. Torres','R. Huamán','S. Beltrán','C. Vega','J. Ríos','P. Salazar'];
+ const UNIDADES=['di','oirh','dici','dti','despacho_superior','ciencias_informacion','director','direccion_ciencias_informacion'];
  const ESTADOS=['planificado','en_curso','en_curso','en_espera','cerrado'];const AREAS=['obra_civil','electrico','legal','administrativo'];const ENTREG=['informe','planos','acta','presupuesto'];
  const out=[];
- const dProy=(inicio)=>{const tc=rnd()<0.7;const fin=fr(inicio,ri(60,360));return{cliente:pick(CLIENTES),estado:pick(ESTADOS),responsable:pick(RESP),area:pick(AREAS),fecha_inicio:inicio,fecha_fin:fin,presupuesto:ri(20,900)*2500,tiene_contrato:tc,nro_contrato:tc?`CT-2026-${String(ri(1,99)).padStart(3,'0')}`:'',descripcion:''}};
+ const dProy=(inicio,sponsor,pm)=>{const tc=rnd()<0.7;const fin=fr(inicio,ri(60,360));return{sponsor:sponsor||pick(UNIDADES),project_manager:pm||pick(UNIDADES),cliente:pick(CLIENTES),estado:pick(ESTADOS),responsable:pick(RESP),area:pick(AREAS),fecha_inicio:inicio,fecha_fin:fin,presupuesto:ri(20,900)*2500,tiene_contrato:tc,nro_contrato:tc?`CT-2026-${String(ri(1,99)).padStart(3,'0')}`:'',descripcion:''}};
  const dEtapa=(inicio)=>{const e=pick(ESTADOS);return{estado:e,avance:e==='cerrado'?100:e==='planificado'?0:ri(5,95),fecha_inicio:inicio,fecha_fin:fr(inicio,ri(20,120)),entregables:shuffle(ENTREG).slice(0,ri(1,3)),observaciones:''}};
  const dTarea=(inicio)=>({estado:pick(ESTADOS),prioridad:pick(['alta','media','baja']),responsable:pick(RESP),fecha_limite:fr(inicio,ri(5,60)),horas:ri(2,80),notas:''});
  const tareas=(parent,codigo,inicio,n)=>{shuffle(TAREAS).slice(0,n).forEach((nom,i)=>out.push({id:uid(),tipo:'tarea',parentId:parent,codigo:`${codigo}.${i+1}`,nombre:nom,creado:inicio,datos:dTarea(inicio)}))};
- NOMBRES.forEach((nombre,i)=>{
+ NOMBRES.forEach(([nombre,sponsor,pm],i)=>{
   const num=i+2,pid='g'+num,codigo='PRJ-'+String(num).padStart(3,'0'),inicio=fr('2026-01-05',ri(0,240));
-  out.push({id:pid,tipo:'proyecto',parentId:null,codigo,nombre,creado:inicio,datos:dProy(inicio)});
+  out.push({id:pid,tipo:'proyecto',parentId:null,codigo,nombre,creado:inicio,datos:dProy(inicio,sponsor,pm)});
   const n=ri(3,6),etapas=shuffle(ETAPAS);let ie=0;
   for(let j=1;j<=n;j++){
    const cod=`${codigo}.${j}`,r=rnd(),ini=fr(inicio,j*ri(10,40));
@@ -333,12 +336,14 @@ function genNodos(){
 function seed(){return{
  meta:{
   tipos:[
-   {id:'proyecto',nombre:'Proyecto',icono:'',formId:'f_proyecto',hijos:['proyecto','etapa','tarea'],columnas:['estado','responsable','fecha_fin'],archivos:true},
+   {id:'proyecto',nombre:'Proyecto',icono:'',formId:'f_proyecto',hijos:['proyecto','etapa','tarea'],columnas:['sponsor','project_manager','estado'],archivos:true},
    {id:'etapa',nombre:'Etapa',icono:'',formId:'f_etapa',hijos:['etapa','tarea'],columnas:['estado','avance','fecha_fin'],archivos:true},
    {id:'tarea',nombre:'Tarea',icono:'',formId:'f_tarea',hijos:[],columnas:['estado','prioridad','responsable','fecha_limite'],archivos:true}
   ],
   formularios:{
    f_proyecto:{id:'f_proyecto',nombre:'Ficha de proyecto',campos:[
+    {key:'sponsor',label:'Sponsor',tipo:'lista',catalogo:'unidades',requerido:true,visible:true,ancho:'half'},
+    {key:'project_manager',label:'Project Manager',tipo:'lista',catalogo:'unidades',requerido:true,visible:true,ancho:'half'},
     {key:'cliente',label:'Cliente',tipo:'texto',requerido:true,visible:true,ancho:'half'},
     {key:'estado',label:'Estado',tipo:'lista',catalogo:'estado',requerido:true,visible:true,ancho:'half'},
     {key:'responsable',label:'Responsable',tipo:'texto',visible:true,ancho:'half'},
@@ -370,6 +375,7 @@ function seed(){return{
    ]}
   },
   catalogos:{
+   unidades:{id:'unidades',nombre:'Unidades (sponsor / PM)',opciones:[{valor:'sin_especificar',etiqueta:'Sin Especificar',color:'#8A94A0'},{valor:'di',etiqueta:'DI',color:'#2E5C8A'},{valor:'oirh',etiqueta:'OIRH',color:'#6B5B95'},{valor:'dici',etiqueta:'DICI',color:'#2E7D5B'},{valor:'dti',etiqueta:'DTI',color:'#C08A1E'},{valor:'despacho_superior',etiqueta:'Despacho Superior',color:'#B23A3A'},{valor:'ciencias_informacion',etiqueta:'Ciencias de la Información',color:'#3A8A8A'},{valor:'director',etiqueta:'Director',color:'#5A6B7C'},{valor:'direccion_ciencias_informacion',etiqueta:'Dirección de Ciencias de la Información',color:'#2E7D8A'}]},
    estado:{id:'estado',nombre:'Estados',opciones:[{valor:'planificado',etiqueta:'Planificado',color:'#8A94A0'},{valor:'en_curso',etiqueta:'En curso',color:'#2E5C8A'},{valor:'en_espera',etiqueta:'En espera',color:'#C08A1E'},{valor:'cerrado',etiqueta:'Cerrado',color:'#2E7D5B'}]},
    prioridad:{id:'prioridad',nombre:'Prioridades',opciones:[{valor:'alta',etiqueta:'Alta',color:'#B23A3A'},{valor:'media',etiqueta:'Media',color:'#C08A1E'},{valor:'baja',etiqueta:'Baja',color:'#8A94A0'}]},
    area:{id:'area',nombre:'Áreas',opciones:[{valor:'obra_civil',etiqueta:'Obra civil',color:'#6B5B95'},{valor:'electrico',etiqueta:'Eléctrico',color:'#2E5C8A'},{valor:'legal',etiqueta:'Legal',color:'#8A94A0'},{valor:'administrativo',etiqueta:'Administrativo',color:'#2E7D5B'}]}
@@ -389,27 +395,27 @@ function seed(){return{
   ],
   reportes:[
    {id:'r1',nombre:'Tareas por estado',tipo:'tarea',alcance:'',campos:['nombre','ruta','prioridad','responsable','fecha_limite','horas'],filtro:{campo:'',valor:''},agrupar:'estado'},
-   {id:'r2',nombre:'Proyectos por área',tipo:'proyecto',alcance:'',campos:['codigo','nombre','cliente','estado','presupuesto'],filtro:{campo:'',valor:''},agrupar:'area'}
+   {id:'r2',nombre:'Proyectos por sponsor',tipo:'proyecto',alcance:'',campos:['codigo','nombre','project_manager','estado','presupuesto'],filtro:{campo:'',valor:''},agrupar:'sponsor'}
   ]
  },
  datos:{
   nodos:[
-   {id:'p1',tipo:'proyecto',parentId:null,codigo:'PRJ-001',nombre:'Ampliación Planta Norte',creado:'2026-03-02',datos:{cliente:'Industrias Andinas S.A.',estado:'en_curso',responsable:'M. Quispe',area:'obra_civil',fecha_inicio:'2026-03-02',fecha_fin:'2026-12-18',presupuesto:1850000,tiene_contrato:true,nro_contrato:'CT-2026-014',descripcion:'Ampliación de 2.400 m² de nave industrial, incluyendo obras civiles, subestación eléctrica y permisos municipales.'}},
-   {id:'e1',tipo:'etapa',parentId:'p1',codigo:'PRJ-001.1',nombre:'Licitación',creado:'2026-03-02',datos:{estado:'cerrado',avance:100,fecha_inicio:'2026-03-02',fecha_fin:'2026-04-15',entregables:['informe','acta'],observaciones:'Adjudicado a Constructora Sur.'}},
-   {id:'t1',tipo:'tarea',parentId:'e1',codigo:'PRJ-001.1.1',nombre:'Revisar bases de licitación',creado:'2026-03-03',datos:{estado:'cerrado',prioridad:'alta',responsable:'L. Paredes',fecha_limite:'2026-03-14',horas:16}},
-   {id:'t2',tipo:'tarea',parentId:'e1',codigo:'PRJ-001.1.2',nombre:'Consolidar consultas de postores',creado:'2026-03-10',datos:{estado:'cerrado',prioridad:'media',responsable:'L. Paredes',fecha_limite:'2026-03-28',horas:8,depende_de:'t1'}},
-   {id:'e2',tipo:'etapa',parentId:'p1',codigo:'PRJ-001.2',nombre:'Ejecución',creado:'2026-04-20',datos:{estado:'en_curso',avance:35,fecha_inicio:'2026-04-20',fecha_fin:'2026-11-30',entregables:['planos','acta','informe']}},
-   {id:'e3',tipo:'etapa',parentId:'e2',codigo:'PRJ-001.2.1',nombre:'Obras civiles',creado:'2026-04-20',datos:{estado:'en_curso',avance:60,fecha_inicio:'2026-04-20',fecha_fin:'2026-09-30',entregables:['planos']}},
-   {id:'t3',tipo:'tarea',parentId:'e3',codigo:'PRJ-001.2.1.1',nombre:'Vaciado de losa nivel 2',creado:'2026-08-01',datos:{estado:'en_curso',prioridad:'alta',responsable:'R. Huamán',fecha_limite:'2026-09-19',horas:40}},
-   {id:'t4',tipo:'tarea',parentId:'e2',codigo:'PRJ-001.2.2',nombre:'Aprobar planos rev. B',creado:'2026-08-20',datos:{estado:'en_espera',prioridad:'media',responsable:'M. Quispe',fecha_limite:'2026-09-15',horas:6,notas:'Esperando respuesta del cliente sobre observaciones.'}},
-   {id:'p2',tipo:'proyecto',parentId:'p1',codigo:'PRJ-001.3',nombre:'Subestación eléctrica',creado:'2026-06-10',datos:{cliente:'Industrias Andinas S.A.',estado:'planificado',responsable:'A. Torres',area:'electrico',fecha_inicio:'2026-10-01',fecha_fin:'2026-12-10',presupuesto:320000,tiene_contrato:false,descripcion:'Proyecto interno: subestación 10 kV con tablero de distribución.'}},
+   {id:'p1',tipo:'proyecto',parentId:null,codigo:'PRJ-001',nombre:'Refrendo Electrónico y Gestión de Cobro en Línea',creado:'2026-03-02',datos:{sponsor:'di',project_manager:'di',cliente:'Contraloría General',estado:'en_curso',responsable:'M. Quispe',area:'administrativo',fecha_inicio:'2026-03-02',fecha_fin:'2026-12-18',presupuesto:1850000,tiene_contrato:true,nro_contrato:'CT-2026-014',descripcion:'Plataforma de refrendo electrónico de documentos y cobro en línea, integrada con las entidades recaudadoras.'}},
+   {id:'e1',tipo:'etapa',parentId:'p1',codigo:'PRJ-001.1',nombre:'Licitación',creado:'2026-03-02',datos:{estado:'cerrado',avance:100,fecha_inicio:'2026-03-02',fecha_fin:'2026-04-15',entregables:['informe','acta'],observaciones:'Adjudicado a Soluciones Digitales S.A.'}},
+   {id:'t1',tipo:'tarea',parentId:'e1',codigo:'PRJ-001.1.1',nombre:'Revisar pliego de cargos',creado:'2026-03-03',datos:{estado:'cerrado',prioridad:'alta',responsable:'L. Paredes',fecha_limite:'2026-03-14',horas:16}},
+   {id:'t2',tipo:'tarea',parentId:'e1',codigo:'PRJ-001.1.2',nombre:'Consolidar consultas de proponentes',creado:'2026-03-10',datos:{estado:'cerrado',prioridad:'media',responsable:'L. Paredes',fecha_limite:'2026-03-28',horas:8,depende_de:'t1'}},
+   {id:'e2',tipo:'etapa',parentId:'p1',codigo:'PRJ-001.2',nombre:'Desarrollo',creado:'2026-04-20',datos:{estado:'en_curso',avance:35,fecha_inicio:'2026-04-20',fecha_fin:'2026-11-30',entregables:['planos','acta','informe']}},
+   {id:'e3',tipo:'etapa',parentId:'e2',codigo:'PRJ-001.2.1',nombre:'Módulo de cobro en línea',creado:'2026-04-20',datos:{estado:'en_curso',avance:60,fecha_inicio:'2026-04-20',fecha_fin:'2026-09-30',entregables:['planos']}},
+   {id:'t3',tipo:'tarea',parentId:'e3',codigo:'PRJ-001.2.1.1',nombre:'Integración con pasarela de pagos',creado:'2026-08-01',datos:{estado:'en_curso',prioridad:'alta',responsable:'R. Huamán',fecha_limite:'2026-09-19',horas:40}},
+   {id:'t4',tipo:'tarea',parentId:'e2',codigo:'PRJ-001.2.2',nombre:'Aprobar diseño de interfaz rev. B',creado:'2026-08-20',datos:{estado:'en_espera',prioridad:'media',responsable:'M. Quispe',fecha_limite:'2026-09-15',horas:6,notas:'Esperando respuesta del sponsor sobre observaciones.'}},
+   {id:'p2',tipo:'proyecto',parentId:'p1',codigo:'PRJ-001.3',nombre:'Portal ciudadano de pagos',creado:'2026-06-10',datos:{sponsor:'di',project_manager:'dici',cliente:'Contraloría General',estado:'planificado',responsable:'A. Torres',area:'administrativo',fecha_inicio:'2026-10-01',fecha_fin:'2026-12-10',presupuesto:320000,tiene_contrato:false,descripcion:'Proyecto interno: portal público para consulta y pago de trámites refrendados.'}},
    ...genNodos()
   ],
   archivos:[
    {id:'a1',nodoId:'p1',campoKey:'contrato_firmado',nombre:'Contrato CT-2026-014 firmado.pdf',clase:'documento',tamano:1843210,fecha:'2026-03-05',origen:'Cliente'},
-   {id:'a2',nodoId:'p1',nombre:'RE: Entrega de planos rev. B.eml',clase:'email',tamano:48210,fecha:'2026-08-21',origen:'Cliente',email:{de:'j.rojas@andinas.pe',para:'m.quispe@sispla.pe',asunto:'RE: Entrega de planos rev. B',fechaEnvio:'2026-08-21'}},
-   {id:'a3',nodoId:'e2',nombre:'Acta de inicio de obra.pdf',clase:'documento',tamano:522000,fecha:'2026-04-20',origen:'Contratista'},
-   {id:'a4',nodoId:'t4',nombre:'Observaciones a planos rev. B.eml',clase:'email',tamano:31000,fecha:'2026-08-28',origen:'Cliente',email:{de:'j.rojas@andinas.pe',para:'m.quispe@sispla.pe',asunto:'Observaciones a planos rev. B',fechaEnvio:'2026-08-28'}}
+   {id:'a2',nodoId:'p1',nombre:'RE: Entrega de diseño rev. B.eml',clase:'email',tamano:48210,fecha:'2026-08-21',origen:'Sponsor',email:{de:'j.rojas@entidad.gob.pa',para:'m.quispe@sispla.demo',asunto:'RE: Entrega de diseño rev. B',fechaEnvio:'2026-08-21'}},
+   {id:'a3',nodoId:'e2',nombre:'Acta de inicio del proyecto.pdf',clase:'documento',tamano:522000,fecha:'2026-04-20',origen:'Proveedor'},
+   {id:'a4',nodoId:'t4',nombre:'Observaciones a diseño rev. B.eml',clase:'email',tamano:31000,fecha:'2026-08-28',origen:'Sponsor',email:{de:'j.rojas@entidad.gob.pa',para:'m.quispe@sispla.demo',asunto:'Observaciones a diseño rev. B',fechaEnvio:'2026-08-28'}}
   ],
   historial:[
    {nodoId:'e2',fecha:'2026-08-30 10:12',campo:'avance',antes:'30',despues:'35'},
@@ -419,7 +425,7 @@ function seed(){return{
  }
 }}
 let S;
-const VERSION=3;
+const VERSION=4;
 function load(){try{const r=localStorage.getItem(LS);S=r?JSON.parse(r):seed()}catch(e){S=seed()}
  /* migraciones: conservan las definiciones del usuario y ajustan solo lo necesario */
  const v=S.version||1;
@@ -427,6 +433,11 @@ function load(){try{const r=localStorage.getItem(LS);S=r?JSON.parse(r):seed()}ca
   const tp=S.meta.tipos.find(t=>t.id==='proyecto');if(tp&&!tp.hijos.includes('tarea'))tp.hijos.push('tarea');
   const fp=S.meta.formularios.f_proyecto;if(fp&&!fp.campos.some(c=>c.key==='contrato_firmado'))fp.campos.push(sd.meta.formularios.f_proyecto.campos.find(c=>c.key==='contrato_firmado'))}
  if(v<3){S.meta.tipos.forEach(t=>{t.icono=''})}
+ if(v<4){const sd=seed();S.datos=sd.datos;
+  if(!S.meta.catalogos.unidades)S.meta.catalogos.unidades=sd.meta.catalogos.unidades;
+  const fp=S.meta.formularios.f_proyecto;if(fp){['project_manager','sponsor'].forEach(k=>{if(!fp.campos.some(c=>c.key===k))fp.campos.unshift(sd.meta.formularios.f_proyecto.campos.find(c=>c.key===k))})}
+  const tp=S.meta.tipos.find(t=>t.id==='proyecto');if(tp)tp.columnas=['sponsor','project_manager','estado'];
+  const r2=S.meta.reportes.find(r=>r.id==='r2');if(r2)Object.assign(r2,sd.meta.reportes.find(r=>r.id==='r2'))}
  if(v<VERSION){S.version=VERSION;save()}}
 function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
