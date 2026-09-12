@@ -30,7 +30,8 @@ Nombres de colección orientativos. Todo lo que aparece está implementado en el
 **`tipos`** — qué es cada nivel del árbol y qué puede contener.
 
 ```json
-{ "id": "etapa", "nombre": "Etapa", "icono": "◆",
+{ "id": "etapa", "nombre": "Etapa", "icono": "◆", "nuevo": "Nueva etapa",
+  "raiz": false,
   "formId": "f_etapa",
   "hijos": ["etapa", "tarea"],
   "columnas": ["estado", "avance", "fecha_fin"],
@@ -38,6 +39,8 @@ Nombres de colección orientativos. Todo lo que aparece está implementado en el
 ```
 
 `archivos` enciende o apaga la pestaña Archivos para todos los nodos de ese tipo.
+
+`raiz` dice si el tipo puede crearse sin padre. Es una decisión explícita del cliente: puede haber un solo tipo raíz (Proyecto) o varios (Portafolio y Proyecto); el `+` del nivel raíz ofrece los marcados. `nuevo` es el texto del botón de crear, definible para concordar el género ("Nuevo proyecto", "Nueva etapa").
 
 La jerarquía no es fija (Proyecto > Etapa > Tarea). Es un grafo de "quién puede contener a quién": un proyecto puede contener proyectos, una etapa puede contener etapas. La profundidad es ilimitada.
 
