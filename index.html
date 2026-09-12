@@ -204,7 +204,7 @@ input[type=color]{width:28px;height:24px;padding:0;border:1px solid var(--line);
   <aside>
     <div class="brand"><div class="brand-row"><b>SisPla</b><button class="menu-tg" id="menutg" onclick="A.menuToggle()" aria-label="Plegar o desplegar el menú"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg></button></div><span>Proyectos multinivel · demo</span></div>
     <nav id="nav"></nav>
-    <div class="side-foot">Todo lo que ves se genera desde el JSON de definición. Los cambios se guardan en este navegador.<br><a href="#/ayuda" style="color:var(--side-ink)">Ayuda y glosario</a><br><button onclick="A.reset()" data-tip="Borra todo lo que hayas cambiado en este navegador (datos y definiciones) y vuelve al ejemplo inicial de la demo. No afecta a nadie más: la demo vive solo en tu navegador.">Restablecer demo</button></div>
+    <div class="side-foot">Todo lo que ves se genera desde el JSON de definición. Los cambios se guardan en este navegador.<br><a href="#/ayuda" style="color:var(--side-ink)">Ayuda y glosario</a><br><button onclick="A.reset()" data-tip="Borra todo lo que hayas cambiado en este navegador (datos y definiciones) y vuelve al ejemplo inicial de la demo. No afecta a nadie más: la demo vive solo en tu navegador.">Restablecer demo</button> <button onclick="A.guardarCopia()" data-tip="Descarga sispla-datos.js con todo lo que ves ahora (definición y datos). Guárdalo junto a index.html y súbelo al repositorio: en cualquier otra máquina la demo arrancará con estos mismos valores, siempre que el archivo sea más nuevo que lo guardado en ese navegador.">Guardar copia</button></div>
   </aside>
   <main>
     <header><div class="crumbs" id="crumbs"></div><div id="topbtn"></div></header>
@@ -213,6 +213,7 @@ input[type=color]{width:28px;height:24px;padding:0;border:1px solid var(--line);
 </div>
 <div id="toast"></div>
 
+<script src="sispla-datos.js"></script> <!-- estado guardado con "Guardar copia"; opcional -->
 <script>
 /* ============ estado ============ */
 const LS='sispla-demo-v1';
@@ -478,6 +479,8 @@ function seed(){return{
 let S;
 const VERSION=5;
 function load(){try{const r=localStorage.getItem(LS);S=r?JSON.parse(r):seed()}catch(e){S=seed()}
+ /* sispla-datos.js (opcional, junto a index.html): estado guardado con "Guardar copia". Manda si es más nuevo que lo de este navegador */
+ const G=window.SISPLA_GUARDADO;if(G&&G.estado&&(G.guardadoEn||0)>(S.modificado||0)){S=JSON.parse(JSON.stringify(G.estado));S.modificado=G.guardadoEn;save();setTimeout(()=>toast('Cargado sispla-datos.js del '+new Date(G.guardadoEn).toLocaleString('es-PE')),300)}
  /* migraciones: conservan las definiciones del usuario y ajustan solo lo necesario */
  const v=S.version||1;
  if(v<2){const sd=seed();S.datos=sd.datos;S.meta.tipos.forEach(t=>{t.archivos=t.archivos!==false});
@@ -491,7 +494,7 @@ function load(){try{const r=localStorage.getItem(LS);S=r?JSON.parse(r):seed()}ca
   const r2=S.meta.reportes.find(r=>r.id==='r2');if(r2)Object.assign(r2,sd.meta.reportes.find(r=>r.id==='r2'))}
  if(v<5){const sd=seed();S.meta.tipos.forEach(t=>{if(!t.nuevo){const st=sd.meta.tipos.find(x=>x.id===t.id);if(st?.nuevo)t.nuevo=st.nuevo}})}
  if(v<VERSION){S.version=VERSION;save()}}
-function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
+function save(){S.modificado=Date.now();try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
 
 /* ============ tooltips ============ */
@@ -858,6 +861,8 @@ function siguienteCodigo(parentId,tid){
 function hist(nodoId,campo,antes,despues){S.datos.historial.unshift({nodoId,fecha:new Date().toISOString().slice(0,16).replace('T',' '),campo,antes,despues})}
 function refresh(){route()}
 const A={
+ guardarCopia(){const ahora=Date.now();const txt='/* Estado de la demo SisPla guardado el '+new Date(ahora).toISOString()+' con "Guardar copia". No editar a mano. */\nwindow.SISPLA_GUARDADO='+JSON.stringify({guardadoEn:ahora,estado:S},null,1)+';\n';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/javascript'}));a.download='sispla-datos.js';document.body.appendChild(a);a.click();a.remove();toast('Descargado sispla-datos.js: cópialo junto a index.html')},
  reset(){if(confirm('¿Volver a los datos y definiciones iniciales del demo?')){S=seed();save();location.hash='#/arbol';refresh();toast('Demo restablecido')}},
  copiar(txt,msg){navigator.clipboard?.writeText(txt).then(()=>toast(msg)).catch(()=>toast('No se pudo copiar'))},
  plegar(el,id,ev){if(ev&&ev.altKey){const ids=[id,...desc(id).filter(x=>hijos(x.id).length).map(x=>x.id)];if(abiertos.has(id))ids.forEach(x=>abiertos.delete(x));else ids.forEach(x=>abiertos.add(x));refresh();return}
