@@ -296,6 +296,7 @@ const TIP={
  tNombre:'Nombre del tipo tal como se muestra al usuario (en singular). Se puede cambiar libremente.',
  tId:'Identificador interno del tipo. Se deriva del nombre al crearlo y luego no cambia; es lo que cada nodo guarda en su campo "tipo".',
  tForm:'La pantalla (formulario) que se abre al editar un nodo de este tipo. Todos los nodos del tipo comparten la misma ficha. Puedes elegir una existente o diseñarla.',
+ tRaiz:'Si está marcado, este tipo aparece en el + del nivel raíz del árbol (en Proyectos y en el panel). Puede haber uno o varios tipos raíz: ustedes deciden. Si ninguno está marcado, el sistema usa como raíz los tipos que ningún otro puede contener.',
  tHijos:'Qué tipos de nodo pueden crearse DENTRO de un nodo de este tipo. Marcar el propio tipo permite anidarlo en sí mismo (proyecto dentro de proyecto). Sin marcas = no admite internos.',
  tCols:'Qué campos de la ficha aparecen como columnas en los listados de este tipo (listado "Todas las …" del menú). Código y nombre van siempre.',
  tQuitar:'Elimina el tipo. Solo se permite si no existe ningún nodo de este tipo.',
@@ -388,7 +389,7 @@ function genNodos(){
 function seed(){return{
  meta:{
   tipos:[
-   {id:'proyecto',nombre:'Proyecto',nuevo:'Nuevo proyecto',icono:'',formId:'f_proyecto',hijos:['proyecto','etapa','tarea'],columnas:['sponsor','project_manager','estado'],archivos:true},
+   {id:'proyecto',nombre:'Proyecto',nuevo:'Nuevo proyecto',raiz:true,icono:'',formId:'f_proyecto',hijos:['proyecto','etapa','tarea'],columnas:['sponsor','project_manager','estado'],archivos:true},
    {id:'etapa',nombre:'Etapa',nuevo:'Nueva etapa',icono:'',formId:'f_etapa',hijos:['etapa','tarea'],columnas:['estado','avance','fecha_fin'],archivos:true},
    {id:'tarea',nombre:'Tarea',nuevo:'Nueva tarea',icono:'',formId:'f_tarea',hijos:[],columnas:['estado','prioridad','responsable','fecha_limite'],archivos:true}
   ],
@@ -477,7 +478,7 @@ function seed(){return{
  }
 }}
 let S;
-const VERSION=5;
+const VERSION=6;
 function load(){try{const r=localStorage.getItem(LS);S=r?JSON.parse(r):seed()}catch(e){S=seed()}
  /* sispla-datos.js (opcional, junto a index.html): estado guardado con "Guardar copia". Manda si es más nuevo que lo de este navegador */
  const G=window.SISPLA_GUARDADO;if(G&&G.estado&&(G.guardadoEn||0)>(S.modificado||0)){S=JSON.parse(JSON.stringify(G.estado));S.modificado=G.guardadoEn;save();setTimeout(()=>toast('Cargado sispla-datos.js del '+new Date(G.guardadoEn).toLocaleString('es-PE')),300)}
@@ -493,6 +494,7 @@ function load(){try{const r=localStorage.getItem(LS);S=r?JSON.parse(r):seed()}ca
   const tp=S.meta.tipos.find(t=>t.id==='proyecto');if(tp)tp.columnas=['sponsor','project_manager','estado'];
   const r2=S.meta.reportes.find(r=>r.id==='r2');if(r2)Object.assign(r2,sd.meta.reportes.find(r=>r.id==='r2'))}
  if(v<5){const sd=seed();S.meta.tipos.forEach(t=>{if(!t.nuevo){const st=sd.meta.tipos.find(x=>x.id===t.id);if(st?.nuevo)t.nuevo=st.nuevo}})}
+ if(v<6){S.meta.tipos.forEach(t=>{if(t.raiz===undefined)t.raiz=(t.id==='proyecto'||!S.meta.tipos.some(o=>o.hijos.includes(t.id)))})}
  if(v<VERSION){S.version=VERSION;save()}}
 function save(){S.modificado=Date.now();try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
@@ -582,7 +584,7 @@ const paginaDe=id=>{const i=raices().findIndex(r=>r.id===raizDe(id));return i<0?
 const marcar=nombre=>{const q=normL(filtro.trim());const i=q?normL(nombre).indexOf(q):-1;if(i<0)return esc(nombre);return esc(nombre.slice(0,i))+'<mark>'+esc(nombre.slice(i,i+q.length))+'</mark>'+esc(nombre.slice(i+q.length))};
 let arbolVisible=true;try{arbolVisible=localStorage.getItem(LS+'-arbol')!=='0'}catch(e){} /* panel de árbol junto a la ficha */
 const abiertos=new Set(); /* nodos desplegados en el árbol; se conserva mientras navegas */
-const tiposRaiz=()=>S.meta.tipos.filter(t=>t.id==='proyecto'||!S.meta.tipos.some(o=>o.hijos.includes(t.id)));
+const tiposRaiz=()=>{const r=S.meta.tipos.filter(t=>t.raiz);return r.length?r:S.meta.tipos.filter(t=>t.id==='proyecto'||!S.meta.tipos.some(o=>o.hijos.includes(t.id)))}; /* marcados como raíz en Tipos de nodo */
 /* Dibuja el árbol desde pid. actual = nodo resaltado. vis = ids visibles cuando hay búsqueda (coincidencias y sus ancestros) */
 function arbolHtml(pid,actual,vis){let hs=pid?hijos(pid):(vis?raices():raices().slice(pagina*PAG,(pagina+1)*PAG));if(vis)hs=hs.filter(n=>vis.has(n.id));if(!hs.length)return '';return `<ul class="${pid?'':'raiz'}" ${pid&&!vis&&!abiertos.has(pid)?'hidden':''}>`+hs.map(n=>{const t=tipo(n.tipo);const fe=campoDe(n.tipo,'estado');const c=hijos(n.id).length;const o=fe&&n.datos.estado?etiquetaOpcion(fe,n.datos.estado):null;const ab=vis?true:abiertos.has(n.id);
   return `<li><div class="row ${n.id===actual?'cur':''}"><span class="tg" ${c?`onclick="A.plegar(this,'${n.id}',event)" style="cursor:pointer" data-tip="Pliega o despliega los internos de este nodo. Con Alt + clic se despliega o pliega la rama completa. Por defecto todo está plegado. Este triángulo es fijo del sistema (parte de la vista de árbol); no se define en ninguna pantalla."`:''}>${c?(ab?'▾':'▸'):''}</span><a href="#/nodo/${n.id}" data-tip="${esc((t?.nombre||n.tipo)+' · '+n.codigo)}">${vis?marcar(n.nombre):esc(n.nombre)}</a><span class="fin">${o?`<i class="dot" style="background:${esc(o.color||'var(--muted)')}" data-tip="${esc(o.etiqueta)}"></i>`:''}${c?`<span class="cnt" data-tip="${esc(TIP.internos)}">${c}</span>`:''}</span><span class="acts">${t?.hijos?.length?`<button class="act" onclick="A.menuNuevo(event,'${n.id}')" data-tip="${esc(TIP.nuevoInterno)}">+</button>`:''}<button class="act del" onclick="event.stopPropagation();A.borrarNodo('${n.id}')" data-tip="${esc(TIP.eliminar)}">×</button></span></div>${arbolHtml(n.id,actual,vis)}</li>`}).join('')+'</ul>'}
@@ -728,6 +730,7 @@ function vTipos(){
   return `<div class="card"><div class="page-head" style="margin-bottom:12px"><div class="line" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><input type="text" id="ti_${t.id}" value="${esc(t.icono)}" style="width:44px;text-align:center" oninput="A.tSet(${i},'icono',this.value)" aria-label="Ícono" data-tip="${esc(TIP.tIcono)}"><input type="text" id="tn_${t.id}" value="${esc(t.nombre)}" style="font-weight:600;font-size:16px" oninput="A.tSet(${i},'nombre',this.value)" aria-label="Nombre del tipo" data-tip="${esc(TIP.tNombre)}"><span class="code" data-tip="${esc(TIP.tId)}">${t.id}</span><label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)">Botón de crear ${q(TIP.tNuevoLabel)}<input type="text" id="tb_${t.id}" value="${esc(t.nuevo||'')}" placeholder="Crear ${esc(t.nombre.toLowerCase())}" style="width:160px" oninput="A.tSet(${i},'nuevo',this.value)" aria-label="Texto del botón de crear" data-tip="${esc(TIP.tNuevoLabel)}"></label><span class="note" data-tip="Cuántos nodos de este tipo existen hoy en el árbol. Mientras haya alguno, el tipo no se puede quitar.">${cnt} registros</span></div>${cnt?'':`<button class="btn sm danger" onclick="A.tDel(${i})" data-tip="${esc(TIP.tQuitar)}">Quitar tipo</button>`}</div>
   <div class="form-grid"><div class="fld half"><label for="tf_${t.id}">Pantalla que usa ${q(TIP.tForm)}</label><div class="line" style="display:flex;gap:8px"><select id="tf_${t.id}" onchange="A.tSet(${i},'formId',this.value,true)" data-tip="${esc(TIP.tForm)}">${Object.values(S.meta.formularios).map(x=>`<option value="${x.id}" ${x.id===t.formId?'selected':''}>${esc(x.nombre)}</option>`).join('')}</select><a class="btn sm design" href="#/form/${t.formId}" data-tip="${esc(TIP.btnDisenar)}">Diseñar</a></div></div>
   <div class="fld half"><label>Archivos adjuntos ${q(TIP.tArchivos)}</label><div class="opts"><label data-tip="${esc(TIP.tArchivos)}"><input type="checkbox" id="ta_${t.id}" ${t.archivos!==false?'checked':''} onchange="A.tSet(${i},'archivos',this.checked)">Admite archivos adjuntos (pestaña Archivos)</label></div><div class="help">Para archivos con significado propio dentro de la ficha, agrega un campo "Archivo adjunto" en la pantalla.</div></div>
+  <div class="fld half"><label>Raíz del árbol ${q(TIP.tRaiz)}</label><div class="opts"><label data-tip="${esc(TIP.tRaiz)}"><input type="checkbox" id="tr_${t.id}" ${t.raiz?'checked':''} onchange="A.tSet(${i},'raiz',this.checked,true)">Puede crearse en el nivel raíz (sin padre)</label></div>${S.meta.tipos.some(x=>x.raiz)?'':'<div class="help">Ningún tipo está marcado como raíz; mientras tanto se usa la regla automática (los tipos que nadie contiene).</div>'}</div>
   <div class="fld half"><label>Puede contener ${q(TIP.tHijos)}</label><div class="opts">${S.meta.tipos.map(o=>`<label data-tip="${esc(`Si está marcado, dentro de un nodo "${t.nombre}" se podrá crear un nodo "${o.nombre}"${o.id===t.id?' (anidado en sí mismo, sin límite de profundidad)':''}.`)}"><input type="checkbox" id="th_${t.id}_${o.id}" ${t.hijos.includes(o.id)?'checked':''} onchange="A.tHijo(${i},'${o.id}',this.checked)">${esc(o.nombre)}</label>`).join('')}</div></div>
   <div class="fld full"><label>Columnas en los listados ${q(TIP.tCols)}</label><div class="opts">${(f?f.campos:[]).map(c=>`<label data-tip="${esc(`Campo "${c.label}" de la pantalla ${f.nombre}. Marcado = aparece como columna en los listados de ${t.nombre}.`)}"><input type="checkbox" id="tc_${t.id}_${c.key}" ${(t.columnas||[]).includes(c.key)?'checked':''} onchange="A.tCol(${i},'${c.key}',this.checked)">${esc(c.label)}</label>`).join('')||'<span class="note">La pantalla no tiene campos.</span>'}</div></div></div></div>`}).join('')+`</div>`);
 }
@@ -902,7 +905,7 @@ const A={
  fMov(fid,i,d){const a=form(fid).campos;const j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];save();refresh()},
  fDel(fid,i){const c=form(fid).campos[i];if(!confirm(`¿Quitar el campo "${c.label}" de la pantalla? Los datos ya guardados en ese campo se conservan en los documentos.`))return;form(fid).campos.splice(i,1);save();refresh()},
  /* tipos */
- nuevoTipo(){const nombre=prompt('Nombre del nuevo tipo de nodo (p. ej. Hito, Contrato, Entregable):');if(!nombre)return;let id=slug(nombre);while(tipo(id))id+='_';const fid='f_'+id;S.meta.formularios[fid]={id:fid,nombre:'Ficha de '+nombre.toLowerCase(),campos:[]};S.meta.tipos.push({id,nombre,icono:'●',formId:fid,hijos:[],columnas:[]});save();refresh();toast('Tipo creado. Define quién puede contenerlo y diseña su pantalla.')},
+ nuevoTipo(){const nombre=prompt('Nombre del nuevo tipo de nodo (p. ej. Hito, Contrato, Entregable):');if(!nombre)return;let id=slug(nombre);while(tipo(id))id+='_';const fid='f_'+id;S.meta.formularios[fid]={id:fid,nombre:'Ficha de '+nombre.toLowerCase(),campos:[]};S.meta.tipos.push({id,nombre,icono:'●',raiz:false,formId:fid,hijos:[],columnas:[]});save();refresh();toast('Tipo creado. Define quién puede contenerlo y diseña su pantalla.')},
  tSet(i,prop,v,re){S.meta.tipos[i][prop]=v;if(prop==='formId')S.meta.tipos[i].columnas=[];save();if(re)refresh();else renderNav()},
  tHijo(i,hid,on){const t=S.meta.tipos[i];t.hijos=on?[...new Set([...t.hijos,hid])]:t.hijos.filter(x=>x!==hid);save()},
  tCol(i,key,on){const t=S.meta.tipos[i];t.columnas=t.columnas||[];t.columnas=on?[...new Set([...t.columnas,key])]:t.columnas.filter(x=>x!==key);save()},
