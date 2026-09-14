@@ -245,8 +245,10 @@ Reglas:
 - **Resultado mixto.** Cada fila indica tipo de documento, ruta en el árbol (`path` resuelto a nombres), el campo donde apareció el texto y un enlace directo al nodo. Se agrupa por tipo y se ordena por relevancia.
 - **Se busca por etiqueta, no solo por valor interno.** Buscar "En curso" debe hallar nodos con `estado: "en_curso"`. La búsqueda consulta los catálogos para traducir.
 - **Filtros opcionales** por tipo de nodo, alcance (subárbol) y rango de fechas, con la misma lógica que los reportes.
-- **Nada que declarar.** Un campo nuevo es buscable desde que se guarda el primer valor. El índice se construye a partir de los documentos, no de una lista fija de campos; de lo contrario, cada campo agregado en caliente exigiría tocar la búsqueda.
+- **Campos buscables se declaran en la pantalla.** Decisión del 2026-09-14: cada campo de una pantalla lleva una marca `buscable`; la búsqueda general recorre solo los campos marcados (más nombre y código, que siempre entran). Así la búsqueda es completamente definible por el cliente, igual que las columnas de los listados, y se evita indexar texto irrelevante. Marcar un campo nuevo como buscable no requiere programar nada: el índice se reconstruye a partir de la definición. Sustituye a la regla anterior de "nada que declarar".
+- **Búsqueda local en los listados.** Cada listado de un tipo (Todos los proyectos, Todos los seguimientos) tiene su propia caja que filtra por código, nombre, ubicación y columnas visibles, y se pagina de a 20. Ya está en el mock; es un paliativo mientras no exista la búsqueda general.
 - **Insensible a mayúsculas y tildes.** "planos" halla "Planos" y "Entrega de planós".
+- **Varias palabras = AND.** El texto se parte por espacios y cada palabra debe aparecer en el registro, en cualquier orden y en cualquiera de los campos buscados: "zato pendiente" halla lo que tiene "zato" y "pendiente" aunque estén lejos. Sin comillas ni operadores: es la regla más simple que permite hallar cosas escondidas. Ya aplica en el mock al árbol y a los listados.
 
 Implementación sugerida sobre MongoDB: un campo `texto` materializado por documento (concatenación de nombre, código y valores de `datos` ya traducidos a etiquetas), actualizado en cada guardado e indexado con índice de texto o Atlas Search; como alternativa, índice *wildcard* sobre `datos.*`. Para el contenido de archivos, extraer texto al subir y guardarlo en `archivos.texto` con el mismo esquema. En el mock basta una función `buscar(q)` que recorra nodos, archivos, historial y definición en memoria y devuelva filas con ese formato.
 
@@ -302,7 +304,7 @@ Decisión fijada el 2026-09-14: el mock se carga con los datos reales del SISPLA
 | `subproyecto` | es el proyecto | **Proyecto** | `PF-<id>.<n>` |
 | `seguimientos` | actividad o tarea del proyecto | **Seguimiento** | `PF-<id>.<n>.<m>` |
 
-Reglas de la carga (script `gen.js`, fuera del repositorio):
+Reglas de la carga (script `herramientas/gen-sispla-datos.js`, ver su README):
 
 - Cada ficha conserva las etiquetas del formulario Blade original (Sponsor, Administrador, Unidad Gestora, Línea Estratégica, No Documento, Ticket, Costo por Hora, Costo Total, Días, Actividad…). "División Subproyectos" pasa a "División del proyecto".
 - Los catálogos `tipo_proyecto`, `tipo_subproyecto`, `unidades_gestoras`, `areas`, `lineas_estrategicas`, `division_subproyectos`, `prioridades`, `estatus` (segmento Avances), `proveedor` y `grupos` se convierten en Listas de opciones; el valor guardado es el nombre en minúsculas sin tildes.
