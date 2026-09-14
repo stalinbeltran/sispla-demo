@@ -1,25 +1,21 @@
-/* Estado de la demo SisPla guardado el 2026-09-14T18:57:07.283Z con "Guardar copia". No editar a mano. */
+/* Estado de la demo SisPla guardado el 2026-09-14T20:01:27.391Z con "Guardar copia". No editar a mano. */
 window.SISPLA_GUARDADO={
- "guardadoEn": 1789412227283,
+ "guardadoEn": 1789416087391,
  "estado": {
   "meta": {
    "tipos": [
     {
      "id": "proyecto",
-     "nombre": "Proyecto",
+     "nombre": "Portafolio de proyectos",
      "icono": "",
-     "formId": "f_proyecto",
+     "formId": "f_portafolio_de_proyectos",
      "hijos": [
       "etapa",
       "tarea"
      ],
-     "columnas": [
-      "sponsor",
-      "project_manager",
-      "estado"
-     ],
+     "columnas": [],
      "archivos": true,
-     "nuevo": "Nuevo proyecto",
+     "nuevo": "Nuevo portafolio",
      "raiz": false
     },
     {
@@ -58,15 +54,15 @@ window.SISPLA_GUARDADO={
     },
     {
      "id": "portafolio_de_proyectos",
-     "nombre": "Portafolio de Proyectos",
+     "nombre": "Proyecto",
      "icono": "",
-     "formId": "f_portafolio_de_proyectos",
+     "formId": "f_proyecto",
      "hijos": [
       "proyecto"
      ],
      "columnas": [],
      "archivos": false,
-     "nuevo": "Nuevo Portafolio",
+     "nuevo": "Nuevo portafolio",
      "raiz": true
     }
    ],
@@ -318,13 +314,13 @@ window.SISPLA_GUARDADO={
      "nombre": "Ficha de portafolio de proyectos",
      "campos": [
       {
-       "key": "portafolio",
-       "label": "Portafolio",
-       "tipo": "lista",
+       "key": "objetivo",
+       "label": "Objetivo",
+       "tipo": "textolargo",
        "requerido": true,
        "visible": true,
        "ancho": "full",
-       "catalogo": "portafolios_de_proyectos"
+       "ayuda": "Descripción del objetivo de este portafolio"
       }
      ]
     }
@@ -5553,15 +5549,6 @@ window.SISPLA_GUARDADO={
       "horas": 70,
       "notas": ""
      }
-    },
-    {
-     "id": "nynfyh0",
-     "tipo": "portafolio_de_proyectos",
-     "parentId": null,
-     "codigo": "PRJ-024",
-     "nombre": "Sistema Gerencial para Ciencias de la Informacion",
-     "creado": "2026-09-12",
-     "datos": {}
     }
    ],
    "archivos": [
@@ -5618,6 +5605,13 @@ window.SISPLA_GUARDADO={
    "historial": [
     {
      "nodoId": "nynfyh0",
+     "fecha": "2026-09-14 19:09",
+     "campo": "objetivo",
+     "antes": "",
+     "despues": "Implementar un sistema para llevar control de..."
+    },
+    {
+     "nodoId": "nynfyh0",
      "fecha": "2026-09-12 00:28",
      "campo": "nombre",
      "antes": "dasdad",
@@ -5654,6 +5648,6 @@ window.SISPLA_GUARDADO={
    ]
   },
   "version": 6,
-  "modificado": 1789172936751
+  "modificado": 1789415448842
  }
 };
