@@ -1,6 +1,6 @@
-/* Estado de la demo SisPla guardado el 2026-09-12T00:13:19.356Z con "Guardar copia". No editar a mano. */
+/* Estado de la demo SisPla guardado el 2026-09-14T18:57:07.283Z con "Guardar copia". No editar a mano. */
 window.SISPLA_GUARDADO={
- "guardadoEn": 1789171999356,
+ "guardadoEn": 1789412227283,
  "estado": {
   "meta": {
    "tipos": [
@@ -19,7 +19,8 @@ window.SISPLA_GUARDADO={
       "estado"
      ],
      "archivos": true,
-     "nuevo": "Nuevo proyecto"
+     "nuevo": "Nuevo proyecto",
+     "raiz": false
     },
     {
      "id": "etapa",
@@ -36,7 +37,8 @@ window.SISPLA_GUARDADO={
       "fecha_fin"
      ],
      "archivos": true,
-     "nuevo": "Nueva etapa"
+     "nuevo": "Nueva etapa",
+     "raiz": false
     },
     {
      "id": "tarea",
@@ -51,7 +53,8 @@ window.SISPLA_GUARDADO={
       "fecha_limite"
      ],
      "archivos": true,
-     "nuevo": "Nueva tarea"
+     "nuevo": "Nueva tarea",
+     "raiz": false
     },
     {
      "id": "portafolio_de_proyectos",
@@ -63,7 +66,8 @@ window.SISPLA_GUARDADO={
      ],
      "columnas": [],
      "archivos": false,
-     "nuevo": "Nuevo Portafolio"
+     "nuevo": "Nuevo Portafolio",
+     "raiz": true
     }
    ],
    "formularios": {
@@ -452,7 +456,7 @@ window.SISPLA_GUARDADO={
     },
     "portafolios_de_proyectos": {
      "id": "portafolios_de_proyectos",
-     "nombre": "Portafolios de Proyectos",
+     "nombre": "Ramas principales",
      "opciones": [
       {
        "valor": "bus_de_interoperabilidad",
@@ -470,7 +474,7 @@ window.SISPLA_GUARDADO={
    "menu": [
     {
      "id": "m1",
-     "label": "Proyectos",
+     "label": "Portafolio de Proyectos",
      "icono": "▣",
      "tipo": "arbol",
      "visible": true
@@ -5549,6 +5553,15 @@ window.SISPLA_GUARDADO={
       "horas": 70,
       "notas": ""
      }
+    },
+    {
+     "id": "nynfyh0",
+     "tipo": "portafolio_de_proyectos",
+     "parentId": null,
+     "codigo": "PRJ-024",
+     "nombre": "Sistema Gerencial para Ciencias de la Informacion",
+     "creado": "2026-09-12",
+     "datos": {}
     }
    ],
    "archivos": [
@@ -5604,6 +5617,13 @@ window.SISPLA_GUARDADO={
    ],
    "historial": [
     {
+     "nodoId": "nynfyh0",
+     "fecha": "2026-09-12 00:28",
+     "campo": "nombre",
+     "antes": "dasdad",
+     "despues": "Sistema Gerencial para Ciencias de la Informacion"
+    },
+    {
      "nodoId": "g2",
      "fecha": "2026-09-11 21:56",
      "campo": "nombre",
@@ -5633,7 +5653,7 @@ window.SISPLA_GUARDADO={
     }
    ]
   },
-  "version": 5,
-  "modificado": 1789171962004
+  "version": 6,
+  "modificado": 1789172936751
  }
 };
