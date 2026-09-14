@@ -1,6 +1,6 @@
-/* Estado de la demo SisPla guardado el 2026-09-14T20:01:27.391Z con "Guardar copia". No editar a mano. */
+/* Estado de la demo SisPla guardado el 2026-09-14T20:04:10.476Z con "Guardar copia". No editar a mano. */
 window.SISPLA_GUARDADO={
- "guardadoEn": 1789416087391,
+ "guardadoEn": 1789416250476,
  "estado": {
   "meta": {
    "tipos": [
@@ -10,13 +10,12 @@ window.SISPLA_GUARDADO={
      "icono": "",
      "formId": "f_portafolio_de_proyectos",
      "hijos": [
-      "etapa",
-      "tarea"
+      "portafolio_de_proyectos"
      ],
      "columnas": [],
      "archivos": true,
      "nuevo": "Nuevo portafolio",
-     "raiz": false
+     "raiz": true
     },
     {
      "id": "etapa",
@@ -58,12 +57,13 @@ window.SISPLA_GUARDADO={
      "icono": "",
      "formId": "f_proyecto",
      "hijos": [
-      "proyecto"
+      "tarea",
+      "etapa"
      ],
      "columnas": [],
      "archivos": false,
      "nuevo": "Nuevo portafolio",
-     "raiz": true
+     "raiz": false
     }
    ],
    "formularios": {
@@ -5648,6 +5648,6 @@ window.SISPLA_GUARDADO={
    ]
   },
   "version": 6,
-  "modificado": 1789415448842
+  "modificado": 1789416237875
  }
 };
