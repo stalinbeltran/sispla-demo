@@ -1,6 +1,6 @@
 # SisPla — demo
 
-Mock navegable de una aplicación de proyectos multinivel que se define a sí misma (pantallas, tipos de nodo, listas, menú y reportes editables en caliente). Todo vive en un solo archivo, sin backend ni dependencias.
+Mock navegable de una aplicación de portafolios, proyectos y seguimientos en un árbol multinivel, que se define a sí misma (pantallas, tipos de nodo, listas, menú y reportes editables en caliente). Todo vive en un solo archivo, sin backend ni dependencias.
 
 - Diseño, modelo de documentos y decisiones: [docs/DISENO.md](docs/DISENO.md).
 - Requisitos transversales (búsqueda en todos los niveles, interrelaciones y base NoSQL): sección 7 del mismo documento.

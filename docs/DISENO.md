@@ -265,13 +265,13 @@ Principios:
 7. **Colección genérica de relaciones como salida de emergencia.** Si un cliente necesita un vínculo que no cabe como campo de ficha (muchos a muchos con atributos propios), se usa una colección `relaciones` con `{ de, a, tipo, datos }`, también definible, sin cambiar el modelo.
 
 
-### 7.3 Árbol de proyectos: orden, paginación y búsqueda por título
+### 7.3 Árbol principal: orden, paginación y búsqueda por título
 
-El árbol es el mismo componente en la página Proyectos (a todo el ancho) y en el panel que acompaña a cada ficha. Reglas fijadas el 2026-09-11, ya implementadas en el mock:
+El árbol es el mismo componente en la página principal (a todo el ancho, titulada con los tipos raíz) y en el panel que acompaña a cada ficha. Reglas fijadas el 2026-09-11, ya implementadas en el mock:
 
-- **Los proyectos más recientes van arriba.** Las raíces se ordenan por fecha de creación descendente (empate: código descendente). Los internos de un nodo conservan su orden de creación.
-- **Paginación solo en el nivel raíz.** Las raíces son independientes entre sí y se muestran de a 10 por página. Los internos de un proyecto nunca se paginan: una vez desplegado, la rama se ve completa. Al abrir un nodo, el árbol se coloca en la página donde está su proyecto raíz. En la implementación real la consulta es `{ parentId: null }` con `sort creado desc`, `skip` y `limit`; el subárbol se trae aparte con `path`.
-- **Búsqueda por título desde el árbol.** Junto a los iconos de desplegar y plegar hay una lupa que abre una caja de búsqueda. Busca en el `nombre` de todos los nodos de todos los proyectos, en todos los niveles, sin distinguir mayúsculas ni tildes. Muestra solo las coincidencias con sus ancestros desplegados y el término resaltado; mientras se busca no hay paginación. Es el primer escalón de la búsqueda global de 7.1: la misma caja crecerá para cubrir campos, archivos e historial, y el resultado mixto de 7.1 se presentará con esta misma forma de árbol filtrado.
+- **Los nodos raíz más recientes van arriba.** Las raíces se ordenan por fecha de creación descendente (empate: código descendente). Los internos de un nodo conservan su orden de creación.
+- **Paginación solo en el nivel raíz.** Las raíces son independientes entre sí y se muestran de a 10 por página. Los internos de un nodo nunca se paginan: una vez desplegado, la rama se ve completa. Al abrir un nodo, el árbol se coloca en la página donde está su nodo raíz. En la implementación real la consulta es `{ parentId: null }` con `sort creado desc`, `skip` y `limit`; el subárbol se trae aparte con `path`.
+- **Búsqueda por título desde el árbol.** Junto a los iconos de desplegar y plegar hay una lupa que abre una caja de búsqueda. Busca en el `nombre` de todos los nodos del árbol, en todos los niveles, sin distinguir mayúsculas ni tildes. Muestra solo las coincidencias con sus ancestros desplegados y el término resaltado; mientras se busca no hay paginación. Es el primer escalón de la búsqueda global de 7.1: la misma caja crecerá para cubrir campos, archivos e historial, y el resultado mixto de 7.1 se presentará con esta misma forma de árbol filtrado.
 
 
 ### 7.4 Registro completo de cambios y recuperación
@@ -308,7 +308,9 @@ Reglas de la carga (script `gen.js`, fuera del repositorio):
 - Los catálogos `tipo_proyecto`, `tipo_subproyecto`, `unidades_gestoras`, `areas`, `lineas_estrategicas`, `division_subproyectos`, `prioridades`, `estatus` (segmento Avances), `proveedor` y `grupos` se convierten en Listas de opciones; el valor guardado es el nombre en minúsculas sin tildes.
 - `proyecto_area` y `proyecto_grupo` pasan a campos de selección múltiple del portafolio.
 - Cada nodo guarda `sispla_id` con el id original para poder cruzarlo.
-- Las personas responsables de un seguimiento (`responsable_seguimiento`) no se cargan: solo la cantidad. Los documentos tampoco.
+- Las personas responsables de un seguimiento (`responsable_seguimiento`) pasan a un campo de selección múltiple sobre la lista Personas, que trae solo nombre (sin correo, cédula ni teléfono) y solo a quienes ya son responsables de algo. El costo y la rata por hora de cada responsable no se cargan.
+- Los `documentos` (actas, informes, notas, memos) se cargan como constancias en la pestaña Archivos. En SISPLA no están ligados a proyectos sino a entidades, así que la asignación es aproximada: cada documento va al proyecto donde la persona que lo registró es responsable del seguimiento con fecha planificada más cercana; los que no tienen esa relación van al portafolio "SIn Especificar". Se guardan sin archivo físico, con su descripción en la columna Detalle y la sigla de la entidad en Origen.
+- `index.html` arranca con un subconjunto de estos mismos datos si no encuentra `sispla-datos.js`; un estado guardado en el navegador con versión anterior a 7 se reemplaza, porque el modelo cambió por completo.
 - El prefijo del código correlativo de los nodos raíz se define por tipo en Tipos de nodo (`prefijo`); los portafolios usan `PF`.
 
 ## 8. Anotado para el futuro (fuera de alcance ahora)
