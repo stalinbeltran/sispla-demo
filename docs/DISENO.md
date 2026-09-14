@@ -292,6 +292,25 @@ Implementación sugerida en MongoDB: colección `log` con índices por `(colecci
 
 ---
 
+### 7.5 Datos reales cargados desde SISPLA
+
+Decisión fijada el 2026-09-14: el mock se carga con los datos reales del SISPLA (base `sispla_aig`, tablas `proyecto`, `subproyecto`, `seguimientos` y sus catálogos), con los nombres que el equipo usa en la práctica y no los que trae el sistema original:
+
+| SISPLA (tabla) | Uso real | Tipo de nodo en el mock | Código |
+|---|---|---|---|
+| `proyecto` | se usa como portafolio | **Portafolio de proyectos** (raíz) | `PF-<id>` |
+| `subproyecto` | es el proyecto | **Proyecto** | `PF-<id>.<n>` |
+| `seguimientos` | actividad o tarea del proyecto | **Seguimiento** | `PF-<id>.<n>.<m>` |
+
+Reglas de la carga (script `gen.js`, fuera del repositorio):
+
+- Cada ficha conserva las etiquetas del formulario Blade original (Sponsor, Administrador, Unidad Gestora, Línea Estratégica, No Documento, Ticket, Costo por Hora, Costo Total, Días, Actividad…). "División Subproyectos" pasa a "División del proyecto".
+- Los catálogos `tipo_proyecto`, `tipo_subproyecto`, `unidades_gestoras`, `areas`, `lineas_estrategicas`, `division_subproyectos`, `prioridades`, `estatus` (segmento Avances), `proveedor` y `grupos` se convierten en Listas de opciones; el valor guardado es el nombre en minúsculas sin tildes.
+- `proyecto_area` y `proyecto_grupo` pasan a campos de selección múltiple del portafolio.
+- Cada nodo guarda `sispla_id` con el id original para poder cruzarlo.
+- Las personas responsables de un seguimiento (`responsable_seguimiento`) no se cargan: solo la cantidad. Los documentos tampoco.
+- El prefijo del código correlativo de los nodos raíz se define por tipo en Tipos de nodo (`prefijo`); los portafolios usan `PF`.
+
 ## 8. Anotado para el futuro (fuera de alcance ahora)
 
 - Login, roles y permisos. Nota de diseño: los permisos también pueden ser definibles (por tipo de nodo, por campo, por rama del árbol) y guardarse en la misma colección de definición.
