@@ -1,0 +1,7 @@
+{
+  "name": "sispla-demo",
+  "private": true,
+  "description": "Demo SisPla: mock navegable con servidor mínimo que guarda el estado en archivos JSON",
+  "scripts": { "start": "node servidor.js" },
+  "engines": { "node": ">=18" }
+}

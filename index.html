@@ -452,13 +452,29 @@ function seed(){return {
 let S;
 const VERSION=7;
 function load(){try{const r=localStorage.getItem(LS);S=r?JSON.parse(r):seed()}catch(e){S=seed()}
- /* sispla-datos.js (opcional, junto a index.html): estado guardado con el botón "Guardar". Manda si es más nuevo que lo de este navegador */
- const G=window.SISPLA_GUARDADO;if(G&&G.estado&&(G.guardadoEn||0)>(S.modificado||0)){S=JSON.parse(JSON.stringify(G.estado));S.modificado=G.guardadoEn;save();setTimeout(()=>toast('Cargado sispla-datos.js del '+new Date(G.guardadoEn).toLocaleString('es-PE')),300)}
+ const W=window.SISPLA_SERVIDOR; /* modo servidor: lo guardado en el servidor manda si es más nuevo que lo de este navegador; si lo local es más nuevo (p. ej. se cerró antes de terminar de enviar), se sube */
+ if(W&&W.estado){if((W.guardadoEn||0)>(S.modificado||0)){S=JSON.parse(JSON.stringify(W.estado));S.modificado=W.guardadoEn;try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}else if((S.modificado||0)>(W.guardadoEn||0))srvAuto()}
+ else{
+  /* sispla-datos.js (opcional, junto a index.html): estado guardado con el botón "Guardar". Manda si es más nuevo que lo de este navegador. En modo servidor solo siembra la primera vez */
+  const G=window.SISPLA_GUARDADO;if(G&&G.estado&&(G.guardadoEn||0)>(S.modificado||0)){S=JSON.parse(JSON.stringify(G.estado));S.modificado=G.guardadoEn;save();setTimeout(()=>toast('Cargado sispla-datos.js del '+new Date(G.guardadoEn).toLocaleString('es-PE')),300)}
+  else if(srvOn)srvAuto(); /* el servidor aún no tiene nada: se sube lo que hay */
+ }
  /* migraciones: en la versión 7 el modelo cambió por completo (Portafolio de proyectos > Proyecto > Seguimiento, datos reales del SISPLA); un estado anterior se reemplaza por los datos de arranque */
  const v=S.version||1;
  if(v<7){S=seed()}
  if(v<VERSION){S.version=VERSION;save()}}
-function save(){S.modificado=Date.now();try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}fsAuto()}
+function save(){S.modificado=Date.now();try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}srvAuto();fsAuto()}
+
+/* ============ guardado en el servidor ============ */
+/* Si la demo se sirve con servidor.js (http, no file://), cada save() envía el estado completo a PUT /api/estado; el servidor lo guarda en
+   datos/estado.json. El navegador conserva su copia en localStorage como respaldo si el envío falla. */
+let srvOn=false,srvGuardado=0,srvError='',srvPendiente=false,srvTimer=null;
+function srvAuto(){if(!srvOn)return;srvPendiente=true;renderFs();clearTimeout(srvTimer);srvTimer=setTimeout(srvEnviar,400)}
+async function srvEnviar(){clearTimeout(srvTimer);const cuerpo=JSON.stringify({guardadoEn:S.modificado,estado:S});
+ try{const r=await fetch('/api/estado',{method:'PUT',headers:{'Content-Type':'application/json'},body:cuerpo});if(!r.ok)throw new Error('HTTP '+r.status);srvGuardado=Date.now();srvError='';srvPendiente=false}
+ catch(e){srvError=e.message||'sin conexión'}
+ renderFs()}
+window.addEventListener('pagehide',()=>{if(srvOn&&srvPendiente)srvEnviar()}); /* si se cierra la pestaña con un envío en espera, se intenta de inmediato */
 
 /* ============ guardado en archivo ============ */
 /* Con la File System Access API (Chrome/Edge, también desde file://): el botón Guardar elige sispla-datos.js una sola vez y el acceso queda
@@ -474,6 +490,11 @@ async function fsEscribir(){const ahora=Date.now();S.modificado=ahora;try{localS
  const w=await fsHandle.createWritable();await w.write(textoEstado(ahora));await w.close();fsGuardado=ahora;fsPendiente=false;renderFs()}
 function fsAuto(){if(!FS_OK||!fsHandle)return;fsPendiente=true;renderFs();clearTimeout(fsTimer);fsTimer=setTimeout(async()=>{try{if(await fsPermiso(false))await fsEscribir();else renderFs()}catch(e){renderFs()}},600)}
 function renderFs(){const el=document.getElementById('fsinfo'),b=document.getElementById('fsbtn');if(!el)return;
+ if(srvOn){b.hidden=!srvError;b.textContent='Reintentar';
+  el.textContent=srvError?'Servidor: no se pudo guardar ('+srvError+'). Los cambios siguen en este navegador; pulsa Reintentar.'
+   :srvPendiente?'Servidor · guardando…'
+   :srvGuardado?'Servidor · guardado '+new Date(srvGuardado).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})+' · cada cambio se guarda solo'
+   :'Servidor · cada cambio se guarda solo';return}
  if(!FS_OK){b.textContent='Descargar copia';el.textContent='Este navegador no puede escribir archivos: Descargar copia baja sispla-datos.js para copiarlo junto a index.html.';return}
  b.textContent=fsHandle?'Guardar':'Guardar en archivo…';
  el.textContent=!fsHandle?'Aún sin archivo: pulsa Guardar y elige sispla-datos.js una vez; después cada cambio se guarda solo.'
@@ -880,7 +901,7 @@ function siguienteCodigo(parentId,tid){
 function hist(nodoId,campo,antes,despues){S.datos.historial.unshift({nodoId,fecha:new Date().toISOString().slice(0,16).replace('T',' '),campo,antes,despues})}
 function refresh(){route()}
 const A={
- async guardarArchivo(){if(!FS_OK){A.guardarCopia();return}
+ async guardarArchivo(){if(srvOn){srvEnviar();return}if(!FS_OK){A.guardarCopia();return}
   try{if(!fsHandle){fsHandle=await showSaveFilePicker({suggestedName:'sispla-datos.js',types:[{description:'Estado de la demo SisPla',accept:{'text/javascript':['.js']}}]});try{await idb('set',fsHandle)}catch(e){}}
    if(!(await fsPermiso(true))){toast('Sin permiso para escribir en '+fsHandle.name);renderFs();return}
    await fsEscribir();toast('Guardado en '+fsHandle.name+'. Desde ahora cada cambio se guarda solo.')}
@@ -960,5 +981,10 @@ const A={
  importar(){try{const o=JSON.parse(document.getElementById('imp').value);if(!o.tipos||!o.formularios)throw new Error('falta tipos/formularios');S.meta=o;save();location.hash='#/arbol';refresh();toast('Definición importada')}catch(e){toast('JSON inválido: '+e.message)}}
 };
 
-load();window.addEventListener('hashchange',route);route();
+/* Arranque. Si la página viene de servidor.js (http), se pide primero el estado guardado allí; desde file:// no hay servidor y se sigue igual que antes */
+async function arrancar(){
+ if(/^https?:$/.test(location.protocol)){try{const r=await fetch('/api/estado',{cache:'no-store'});if(r.ok){srvOn=true;if(r.status===200){const W=await r.json();if(W&&W.estado)window.SISPLA_SERVIDOR=W}}}catch(e){}}
+ load();window.addEventListener('hashchange',route);route();renderFs();
+}
+arrancar();
 </script>
