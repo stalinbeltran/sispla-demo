@@ -1,6 +1,6 @@
-/* Estado de la demo SisPla generado el 2026-09-14T20:38:10.431Z desde la base sispla_aig (tablas proyecto, subproyecto, seguimientos, responsable_seguimiento, documentos y sus catálogos). No editar a mano. */
+/* Estado de la demo SisPla guardado el 2026-09-15T13:24:48.356Z desde la demo (botón Guardar). No editar a mano. */
 window.SISPLA_GUARDADO={
- "guardadoEn": 1789418290431,
+ "guardadoEn": 1789478688356,
  "estado": {
   "meta": {
    "tipos": [
@@ -6705,6 +6705,6 @@ window.SISPLA_GUARDADO={
    "historial": []
   },
   "version": 7,
-  "modificado": 1789418290431
+  "modificado": 1789478688356
  }
 };

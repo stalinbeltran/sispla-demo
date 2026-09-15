@@ -46,6 +46,7 @@ nav .ic{width:16px;text-align:center;opacity:.85;font-size:12px}
 .side-sw button:hover{background:rgba(255,255,255,.08)}
 .side-sw button .ic{width:16px;text-align:center;font-size:12px}
 .side-foot{flex:none;padding:10px 18px 0;font-size:11.5px;color:var(--side-muted);border-top:1px solid rgba(255,255,255,.08)}
+.fsinfo{margin:8px 0 2px;font-size:11px;line-height:1.35}
 .side-foot button{background:none;border:1px solid rgba(255,255,255,.18);color:var(--side-ink);border-radius:5px;padding:4px 8px;font-size:11.5px;margin-top:6px}
 .brand-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .menu-tg{background:none;border:0;color:var(--side-muted);border-radius:6px;padding:4px;display:flex;align-items:center;justify-content:center;flex:none}
@@ -212,7 +213,7 @@ input[type=color]{width:28px;height:24px;padding:0;border:1px solid var(--line);
     <div class="brand"><div class="brand-row"><b>SisPla</b><button class="menu-tg" id="menutg" onclick="A.menuToggle()" aria-label="Plegar o desplegar el menú"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg></button></div><span>Árbol multinivel · demo</span></div>
     <nav id="nav"></nav>
     <div class="side-sw"><button id="menusw" onclick="A.menuConfigToggle()"></button></div>
-    <div class="side-foot">Todo lo que ves se genera desde el JSON de definición. Los cambios se guardan en este navegador.<br><a href="#/ayuda" style="color:var(--side-ink)">Ayuda y glosario</a><br><button onclick="A.reset()" data-tip="Borra todo lo que hayas cambiado en este navegador (datos y definiciones) y vuelve al ejemplo inicial de la demo. No afecta a nadie más: la demo vive solo en tu navegador.">Restablecer demo</button> <button onclick="A.guardarCopia()" data-tip="Descarga sispla-datos.js con todo lo que ves ahora (definición y datos). Guárdalo junto a index.html y súbelo al repositorio: en cualquier otra máquina la demo arrancará con estos mismos valores, siempre que el archivo sea más nuevo que lo guardado en ese navegador.">Guardar copia</button></div>
+    <div class="side-foot">Todo lo que ves se genera desde el JSON de definición. Los cambios se guardan en este navegador.<br><a href="#/ayuda" style="color:var(--side-ink)">Ayuda y glosario</a><div id="fsinfo" class="fsinfo"></div><button onclick="A.reset()" data-tip="Borra todo lo que hayas cambiado en este navegador (datos y definiciones) y vuelve al ejemplo inicial de la demo. No afecta a nadie más: la demo vive solo en tu navegador.">Restablecer demo</button> <button id="fsbtn" onclick="A.guardarArchivo()" data-tip="Guarda todo lo que ves (definición y datos) en sispla-datos.js, junto a index.html. La primera vez eliges el archivo; desde ahí cada cambio se escribe solo. Tras recargar la página, el navegador pide confirmar una vez con este botón. En navegadores sin esa función, descarga el archivo.">Guardar</button> <button onclick="A.cargarArchivo()" data-tip="Abre un sispla-datos.js guardado en otra máquina o por otra persona y reemplaza lo que ves con su contenido.">Cargar…</button><input type="file" id="fsopen" accept=".js" hidden onchange="A.cargarArchivoLeer(this)"></div>
   </aside>
   <main>
     <header><div class="crumbs" id="crumbs"></div><div id="topbtn"></div></header>
@@ -221,7 +222,7 @@ input[type=color]{width:28px;height:24px;padding:0;border:1px solid var(--line);
 </div>
 <div id="toast"></div>
 
-<script src="sispla-datos.js"></script> <!-- estado guardado con "Guardar copia"; opcional -->
+<script src="sispla-datos.js"></script> <!-- estado guardado con el botón "Guardar"; opcional -->
 <script>
 /* ============ estado ============ */
 const LS='sispla-demo-v1';
@@ -451,13 +452,35 @@ function seed(){return {
 let S;
 const VERSION=7;
 function load(){try{const r=localStorage.getItem(LS);S=r?JSON.parse(r):seed()}catch(e){S=seed()}
- /* sispla-datos.js (opcional, junto a index.html): estado guardado con "Guardar copia". Manda si es más nuevo que lo de este navegador */
+ /* sispla-datos.js (opcional, junto a index.html): estado guardado con el botón "Guardar". Manda si es más nuevo que lo de este navegador */
  const G=window.SISPLA_GUARDADO;if(G&&G.estado&&(G.guardadoEn||0)>(S.modificado||0)){S=JSON.parse(JSON.stringify(G.estado));S.modificado=G.guardadoEn;save();setTimeout(()=>toast('Cargado sispla-datos.js del '+new Date(G.guardadoEn).toLocaleString('es-PE')),300)}
  /* migraciones: en la versión 7 el modelo cambió por completo (Portafolio de proyectos > Proyecto > Seguimiento, datos reales del SISPLA); un estado anterior se reemplaza por los datos de arranque */
  const v=S.version||1;
  if(v<7){S=seed()}
  if(v<VERSION){S.version=VERSION;save()}}
-function save(){S.modificado=Date.now();try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
+function save(){S.modificado=Date.now();try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}fsAuto()}
+
+/* ============ guardado en archivo ============ */
+/* Con la File System Access API (Chrome/Edge, también desde file://): el botón Guardar elige sispla-datos.js una sola vez y el acceso queda
+   guardado en IndexedDB; desde ahí cada save() reescribe el archivo solo. Al recargar la página el navegador vuelve a pedir permiso una vez
+   (un clic en Guardar). En navegadores sin la API el botón descarga el archivo, como antes. */
+const FS_OK=!!window.showSaveFilePicker;
+let fsHandle=null,fsGuardado=0,fsPendiente=false,fsPerm='prompt',fsTimer=null;
+const idb=(op,val)=>new Promise((res,rej)=>{const r=indexedDB.open('sispla-fs',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onerror=()=>rej(r.error);
+ r.onsuccess=()=>{const db=r.result,tx=db.transaction('kv',op==='get'?'readonly':'readwrite'),st=tx.objectStore('kv');const q=op==='get'?st.get('handle'):op==='set'?st.put(val,'handle'):st.delete('handle');q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);tx.oncomplete=()=>db.close()}});
+const textoEstado=ahora=>'/* Estado de la demo SisPla guardado el '+new Date(ahora).toISOString()+' desde la demo (botón Guardar). No editar a mano. */\nwindow.SISPLA_GUARDADO='+JSON.stringify({guardadoEn:ahora,estado:S},null,1)+';\n';
+async function fsPermiso(pedir){if(!fsHandle)return false;fsPerm=await fsHandle.queryPermission({mode:'readwrite'});if(fsPerm!=='granted'&&pedir)fsPerm=await fsHandle.requestPermission({mode:'readwrite'});return fsPerm==='granted'}
+async function fsEscribir(){const ahora=Date.now();S.modificado=ahora;try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){} /* misma marca de tiempo en navegador y archivo: al recargar no se pisa nada */
+ const w=await fsHandle.createWritable();await w.write(textoEstado(ahora));await w.close();fsGuardado=ahora;fsPendiente=false;renderFs()}
+function fsAuto(){if(!FS_OK||!fsHandle)return;fsPendiente=true;renderFs();clearTimeout(fsTimer);fsTimer=setTimeout(async()=>{try{if(await fsPermiso(false))await fsEscribir();else renderFs()}catch(e){renderFs()}},600)}
+function renderFs(){const el=document.getElementById('fsinfo'),b=document.getElementById('fsbtn');if(!el)return;
+ if(!FS_OK){b.textContent='Descargar copia';el.textContent='Este navegador no puede escribir archivos: Descargar copia baja sispla-datos.js para copiarlo junto a index.html.';return}
+ b.textContent=fsHandle?'Guardar':'Guardar en archivo…';
+ el.textContent=!fsHandle?'Aún sin archivo: pulsa Guardar y elige sispla-datos.js una vez; después cada cambio se guarda solo.'
+  :fsPendiente?fsHandle.name+' · cambios sin guardar'+(fsPerm==='granted'?'…':'. Pulsa Guardar para reactivar el guardado automático')
+  :fsGuardado?fsHandle.name+' · guardado '+new Date(fsGuardado).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})+' · cada cambio se guarda solo'
+  :fsHandle.name+(fsPerm==='granted'?' · cada cambio se guarda solo':'. Pulsa Guardar una vez para reactivar el guardado automático')}
+if(FS_OK)idb('get').then(h=>{if(h){fsHandle=h;return fsPermiso(false)}}).catch(()=>{}).then(renderFs);else renderFs();
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),1800)}
 
 /* ============ tooltips ============ */
@@ -850,7 +873,17 @@ function siguienteCodigo(parentId,tid){
 function hist(nodoId,campo,antes,despues){S.datos.historial.unshift({nodoId,fecha:new Date().toISOString().slice(0,16).replace('T',' '),campo,antes,despues})}
 function refresh(){route()}
 const A={
- guardarCopia(){const ahora=Date.now();const txt='/* Estado de la demo SisPla guardado el '+new Date(ahora).toISOString()+' con "Guardar copia". No editar a mano. */\nwindow.SISPLA_GUARDADO='+JSON.stringify({guardadoEn:ahora,estado:S},null,1)+';\n';
+ async guardarArchivo(){if(!FS_OK){A.guardarCopia();return}
+  try{if(!fsHandle){fsHandle=await showSaveFilePicker({suggestedName:'sispla-datos.js',types:[{description:'Estado de la demo SisPla',accept:{'text/javascript':['.js']}}]});try{await idb('set',fsHandle)}catch(e){}}
+   if(!(await fsPermiso(true))){toast('Sin permiso para escribir en '+fsHandle.name);renderFs();return}
+   await fsEscribir();toast('Guardado en '+fsHandle.name+'. Desde ahora cada cambio se guarda solo.')}
+  catch(e){if(e.name!=='AbortError')toast('No se pudo guardar: '+e.message);renderFs()}},
+ cargarArchivo(){document.getElementById('fsopen').click()},
+ cargarArchivoLeer(inp){const f=inp.files[0];inp.value='';if(!f)return;
+  f.text().then(t=>{const k='window.SISPLA_GUARDADO=';const i=t.indexOf(k);if(i<0)throw 0;const G=JSON.parse(t.slice(i+k.length).trim().replace(/;$/,''));if(!G.estado||(G.estado.version||1)<7)throw 0;
+   if(!confirm('¿Reemplazar lo que ves por el contenido de '+f.name+' (guardado el '+new Date(G.guardadoEn||0).toLocaleString('es-PE')+')? Lo que hay ahora en este navegador se pierde'+(fsHandle?' y '+fsHandle.name+' se reescribe con lo cargado':'')+'.'))return;
+   S=G.estado;if((S.version||1)<VERSION)S.version=VERSION;save();location.hash='#/arbol';refresh();toast('Cargado '+f.name)}).catch(()=>toast('Ese archivo no es un sispla-datos.js válido'))},
+ guardarCopia(){const ahora=Date.now();const txt='/* Estado de la demo SisPla guardado el '+new Date(ahora).toISOString()+' con "Descargar copia". No editar a mano. */\nwindow.SISPLA_GUARDADO='+JSON.stringify({guardadoEn:ahora,estado:S},null,1)+';\n';
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/javascript'}));a.download='sispla-datos.js';document.body.appendChild(a);a.click();a.remove();toast('Descargado sispla-datos.js: cópialo junto a index.html')},
  reset(){if(confirm('¿Volver a los datos y definiciones iniciales del demo?')){S=seed();save();location.hash='#/arbol';refresh();toast('Demo restablecido')}},
  copiar(txt,msg){navigator.clipboard?.writeText(txt).then(()=>toast(msg)).catch(()=>toast('No se pudo copiar'))},

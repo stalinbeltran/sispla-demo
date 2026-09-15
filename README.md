@@ -15,19 +15,25 @@ Invoke-Item .\index.html
 
 Abre el mock en el navegador predeterminado. Los cambios que se hagan en el diseñador se guardan en `localStorage` del navegador; para volver a la semilla inicial, usar el botón **Restablecer demo** al pie del menú lateral.
 
-## Llevar lo definido a otra máquina
+## Guardar lo que se ingresa (y llevarlo a otra máquina)
 
-Lo que se cambia en la demo (definiciones y datos) queda en el `localStorage` del navegador. Para llevarlo a otra máquina:
+Los cambios (definiciones y datos) quedan siempre en el `localStorage` del navegador. Además, la demo puede escribirlos sola en `sispla-datos.js`, junto a `index.html`:
 
-1. En la demo, pie del menú lateral, pulsar **Guardar copia**. El navegador descarga `sispla-datos.js`.
-2. Copiar ese archivo junto a `index.html` (reemplazando el anterior si existe) y subirlo al repositorio:
+1. En el pie del menú lateral, pulsar **Guardar** y elegir `sispla-datos.js` en la carpeta del proyecto (una sola vez; el navegador recuerda el archivo).
+2. Desde ese momento cada cambio se escribe solo en el archivo. El pie del menú muestra la hora del último guardado.
+3. Al volver a abrir la página, Chrome/Edge piden confirmar el acceso una vez: un clic en **Guardar** y sigue automático.
+
+Esto usa la File System Access API (Chrome y Edge, también con `file://`). En Firefox o Safari el botón dice **Descargar copia** y baja el archivo para copiarlo a mano junto a `index.html`.
+
+Para llevar el estado a otra máquina basta subir `sispla-datos.js` al repositorio:
 
 ```powershell
-Copy-Item "$env:USERPROFILE\Downloads\sispla-datos.js" .\sispla-datos.js
 git add sispla-datos.js
 git commit -m "Estado de la demo"
 ```
 
-3. En la otra máquina, tras `git pull`, abrir `index.html`. Si el archivo es más nuevo que lo guardado en ese navegador, la demo arranca con esos valores y lo avisa. Si no hay archivo, no pasa nada.
+En la otra máquina, tras `git pull`, abrir `index.html`: si el archivo es más nuevo que lo guardado en ese navegador, la demo arranca con esos valores y lo avisa. Si alguien envía un `sispla-datos.js` por otro medio, el botón **Cargar…** lo abre y reemplaza lo que hay.
+
+**Restablecer demo** también se escribe en el archivo enlazado: si se quiere conservar lo ingresado, hacer antes un `git commit` de `sispla-datos.js`.
 
 No hay pruebas automatizadas.
