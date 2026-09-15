@@ -194,6 +194,13 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padd
 #tip b{color:var(--design)}
 .hint{font-size:12px;color:var(--muted);background:var(--panel2);border-left:3px solid var(--line);padding:5px 9px;border-radius:0 4px 4px 0;flex-basis:100%}
 .hint b{color:var(--ink)}
+.hint.warn{border-left-color:var(--design);background:var(--design-soft)}
+/* Indicador de "hay más dato del que el control muestra" */
+.mas{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:16px;padding:0 5px;border-radius:9px;background:var(--design-soft);color:var(--design);border:1px solid var(--design);font-size:10.5px;font-weight:600;cursor:pointer;margin-left:5px;vertical-align:middle;line-height:1;white-space:nowrap}
+.mas:focus-visible{outline:2px solid var(--design);outline-offset:1px}
+.mas-panel{font-size:12px;background:var(--design-soft);border-left:3px solid var(--design);padding:6px 9px;border-radius:0 4px 4px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.mas-panel .note{flex-basis:100%}
+.mas-panel .btn.sm{padding:0 5px;line-height:1.4}
 .glos dt{font-weight:600;margin-top:12px}.glos dd{margin:2px 0 0 0;color:var(--muted)}
 .tag{display:inline-block;font-size:10.5px;padding:0 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;vertical-align:middle}
 .tag.fijo{background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
@@ -282,7 +289,7 @@ const TIP={
  dsgCampos:'La lista de campos de esta pantalla, en el orden en que se mostrarán. Cada fila es un campo. Usa las flechas para reordenar. Todo cambio se guarda al instante en la definición y se ve en la vista previa de la derecha.',
  dsgEtiqueta:'Texto que verá el usuario junto al campo. Puedes cambiarlo cuando quieras: no afecta a los datos ya guardados, porque los datos se guardan bajo la clave interna, no bajo la etiqueta.',
  dsgKey:'Clave interna del campo (se deriva sola de la etiqueta al crearlo y luego NO cambia). Es el nombre con el que el valor se guarda dentro del objeto "datos" de cada nodo, y el nombre que usan las condiciones y los reportes. Por eso puedes renombrar la etiqueta sin perder nada.',
- dsgTipo:'Tipo de control del campo. '+'Esta lista es FIJA del sistema (viene programada). Tipos disponibles:\n'+listaDesc(TIPOS_CAMPO,(k,v)=>v+': '+TIPOS_CAMPO_DESC[k]),
+ dsgTipo:'Tipo de control del campo. '+'Cambiar el tipo NUNCA borra lo ya guardado: el dato se conserva tal cual y el control lo muestra como puede. Si guarda más de lo que el control admite (p. ej. varias personas en un control de una sola opción), la ficha lo señala con un ícono ámbar y el dato completo sigue detrás.\n\n'+'Esta lista es FIJA del sistema (viene programada). Tipos disponibles:\n'+listaDesc(TIPOS_CAMPO,(k,v)=>v+': '+TIPOS_CAMPO_DESC[k]),
  dsgAncho:'Cuánto ocupa el campo en la grilla de la ficha: media fila (dos campos por línea) o la fila completa (para textos largos o listas de casillas).',
  dsgReq:'Si está marcado, no se puede guardar la ficha con este campo vacío. Si el campo está oculto por una condición, no se exige.',
  dsgVisible:'Desmarcado = el campo se quita de la pantalla SIN borrar los datos que ya tenga cada nodo. Si lo vuelves a marcar, los valores reaparecen. Es la forma segura de "sacar" un campo.',
@@ -533,6 +540,33 @@ const valorUnico=v=>Array.isArray(v)?(v.length?v[0]:''):(v===undefined||v===null
 const valorLista=v=>Array.isArray(v)?v:(v===undefined||v===null||v===''?[]:[v]);
 const enOpciones=(f,v)=>opciones(f).some(o=>String(o.valor)===String(v));
 const opcionFuera=(f,v)=>enOpciones(f,v)||v===''||v===undefined||v===null?[]:[{valor:v,etiqueta:`${etiquetaOpcion(f,v).etiqueta} (valor actual, fuera de la lista)`,fuera:true}];
+/* proyectar(campo, valorGuardado): cómo se ve el dato en el control ACTUAL sin alterar lo guardado.
+   visible: lo que el control muestra · ocultos: lo que no cabe en el control · todos: el dato completo · nota: aviso para el usuario (vacío si cabe todo) */
+const UNICOS=['lista','radio','referencia'];
+function proyectar(c,v){
+ const vacio=v===undefined||v===null||v===''||(Array.isArray(v)&&!v.length);
+ const arr=valorLista(v),T=TIPOS_CAMPO[c.tipo]||c.tipo,s=x=>Array.isArray(x)?x.map(y=>etiquetaOpcion(c,y).etiqueta).join(', '):String(x);
+ const r={visible:vacio?'':v,ocultos:[],todos:vacio?[]:arr,nota:'',clase:'aviso'};
+ if(vacio){if(c.tipo==='multiple')r.visible=[];if(c.tipo==='checkbox')r.visible=false;return r}
+ switch(c.tipo){
+  case 'lista':case 'radio':case 'referencia':r.visible=arr[0];r.ocultos=arr.slice(1);if(r.ocultos.length){r.clase='mas';r.nota=`El control «${T}» muestra una sola opción, pero el campo guarda ${arr.length} valores (seguramente de cuando era «Selección múltiple»)`}break;
+  case 'multiple':r.visible=arr;break;
+  case 'checkbox':r.visible=!!v;if(typeof v!=='boolean'){r.ocultos=arr;r.nota=`El valor guardado («${s(v)}») no es sí/no; el control lo muestra como «${v?'Sí':'No'}»`}break;
+  case 'numero':if(Array.isArray(v)||v===''||isNaN(Number(v))){r.visible='';r.ocultos=arr;r.nota=`El valor guardado («${s(v)}») no es un número; el control lo muestra vacío`}else r.visible=Number(v);break;
+  case 'fecha':if(!/^\d{4}-\d{2}-\d{2}$/.test(String(v))){r.visible='';r.ocultos=arr;r.nota=`El valor guardado («${s(v)}») no es una fecha AAAA-MM-DD; el control lo muestra vacío`}break;
+  case 'texto':case 'textolargo':if(Array.isArray(v)){r.visible=s(v);r.ocultos=arr;r.nota=`El campo guarda una lista de ${arr.length} valores (de cuando era un control de opciones); el texto los muestra unidos por comas. Si editas el texto, se guardará como texto simple`}else if(typeof v!=='string')r.visible=String(v);break;
+ }
+ return r;
+}
+/* Al guardar: el dato solo cambia si el usuario cambió lo que el control mostraba. En controles de una sola opción, los valores ocultos se conservan detrás del elegido. */
+const normV=x=>Array.isArray(x)?x.map(String):typeof x==='boolean'?x:String(x??'');
+const mismoValor=(a,b)=>JSON.stringify(normV(a))===JSON.stringify(normV(b));
+function fusionar(c,p,leido){if(UNICOS.includes(c.tipo)&&p.ocultos.length)return leido===''?[...p.ocultos]:[leido,...p.ocultos];return leido}
+const valorHtml=(c,x)=>opciones(c).length?chip(c,x):`<code>${esc(String(x))}</code>`;
+function masBadge(c,p,id){const lista=p.todos.map(x=>'· '+etiquetaOpcion(c,x).etiqueta).join('\n');const tip=`${p.nota}.\n\nGuardado en este campo:\n${lista}\n\nNada se pierde: el dato completo se conserva mientras no cambies el valor en el control.${id?'\n\nClic para ver el detalle.':''}`;return `<span class="mas" tabindex="0" role="button" data-tip="${esc(tip)}" ${id?`onclick="A.verMas('${id}')"`:''}>${p.clase==='mas'?'+'+p.ocultos.length:'!'}</span>`}
+function masPanel(c,p,id,nodoId){const puedeQuitar=nodoId&&UNICOS.includes(c.tipo)&&p.ocultos.length;return `<div class="mas-panel" id="${id}_mas" hidden><b>Guardado en este campo:</b> ${p.todos.map((x,i)=>valorHtml(c,x)+(puedeQuitar&&i>0?`<button type="button" class="btn ghost sm" onclick="A.quitarOculto('${nodoId}','${c.key}',${i})" data-tip="Descarta este valor oculto del dato guardado. Es la única forma de borrarlo: guardar la ficha no lo toca.">✕</button>`:'')).join(' ')}<span class="note">${esc(p.nota)}. El control «${esc(TIPOS_CAMPO[c.tipo])}» muestra ${p.clase==='mas'?'solo el primero':'lo que puede'}; el resto sigue guardado y no se pierde al guardar la ficha${UNICOS.includes(c.tipo)&&p.ocultos.length?' (si eliges otra opción, reemplaza solo la visible)':''}.</span></div>`}
+/* Registros cuyo dato en este campo no cabe en el control actual (para avisar en el diseñador) */
+function impactoCampo(fid,c){const usa=S.meta.tipos.filter(t=>t.formId===fid).map(t=>t.id);const af=[];S.datos.nodos.forEach(n=>{if(!usa.includes(n.tipo))return;const p=proyectar(c,n.datos[c.key]);if(p.nota)af.push({n,p})});return af}
 function campoDe(tid,key){return formDeTipo(tid)?.campos.find(c=>c.key===key)}
 function fmtNum(n){return Number(n).toLocaleString('es-PE')}
 function fmtBytes(b){return b>1e6?(b/1e6).toFixed(1)+' MB':Math.round(b/1e3)+' KB'}
@@ -542,10 +576,10 @@ function mostrarValor(f,v,n){
  if(f.tipo==='archivo'){const k=n?archivosCampo(n.id,f.key).length:0;return k?`${k} archivo${k>1?'s':''}`:'<span class="note">—</span>'}
  if(v===undefined||v===null||v==='')return '<span class="note">—</span>';
  switch(f.tipo){
-  case 'lista':case 'radio':return chip(f,valorUnico(v));
+  case 'lista':case 'radio':{const p=proyectar(f,v);return chip(f,p.visible)+(p.nota?masBadge(f,p):'')}
   case 'multiple':return valorLista(v).map(x=>chip(f,x)).join(' ');
-  case 'checkbox':return v?'Sí':'No';
-  case 'numero':return fmtNum(v);
+  case 'checkbox':{const p=proyectar(f,v);return (v?'Sí':'No')+(p.nota?masBadge(f,p):'')}
+  case 'numero':{const p=proyectar(f,v);return p.nota?esc(String(v))+masBadge(f,p):fmtNum(v)}
   case 'referencia':{const n=nodo(v);return n?`<a href="#/nodo/${n.id}">${esc(n.nombre)}</a>`:esc(v)}
   default:return esc(v);
  }}
@@ -671,7 +705,7 @@ ${TIP.codigo}`)}">i</span> <button class="btn ghost sm" onclick="A.renombrar('${
 /* ============ formulario dinámico ============ */
 function renderForm(f,data,pre='c_',nodoId){
  return `<div class="form-grid" id="dynform">`+f.campos.filter(c=>c.visible!==false).map(c=>{
-  const id=pre+c.key,v=data[c.key];let ctl='';
+  const id=pre+c.key,p=proyectar(c,data[c.key]),v=p.visible;let ctl='';
   const at=`id="${id}" name="${c.key}"`;
   switch(c.tipo){
    case 'archivo':{const as=nodoId?archivosCampo(nodoId,c.key):[];
@@ -687,7 +721,7 @@ function renderForm(f,data,pre='c_',nodoId){
    default:ctl=`<input type="text" ${at} value="${esc(v)}">`;
   }
   const tipCampo=`Campo "${c.label}" · tipo: ${TIPOS_CAMPO[c.tipo]||c.tipo} · clave interna: ${c.key}${c.requerido?' · requerido':''}${c.visibleSi?.campo?` · se muestra solo si ${c.visibleSi.campo} = ${c.visibleSi.valor}`:''}.\n${TIPOS_CAMPO_DESC[c.tipo]||''}\n\nEste campo no está programado: está definido en la pantalla "${f.nombre}". Se agrega, cambia o quita con el botón ámbar "Diseñar esta pantalla".${c.ayuda?'\n\nAyuda del campo: '+c.ayuda:''}`;
-  return `<div class="fld ${c.ancho==='full'?'full':'half'}" data-key="${c.key}"><label for="${id}" data-tip="${esc(tipCampo)}">${esc(c.label)}${c.requerido?' <span class="req" data-tip="Campo requerido: no se puede guardar la ficha si está vacío.">*</span>':''}</label>${ctl}${c.ayuda?`<div class="help">${esc(c.ayuda)}</div>`:''}</div>`;
+  return `<div class="fld ${c.ancho==='full'?'full':'half'}" data-key="${c.key}"><label for="${id}" data-tip="${esc(tipCampo)}">${esc(c.label)}${c.requerido?' <span class="req" data-tip="Campo requerido: no se puede guardar la ficha si está vacío.">*</span>':''}${p.nota?masBadge(c,p,id):''}</label>${ctl}${p.nota?masPanel(c,p,id,nodoId):''}${c.ayuda?`<div class="help">${esc(c.ayuda)}</div>`:''}</div>`;
  }).join('')+`</div>`;
 }
 function leerForm(f){
@@ -745,6 +779,7 @@ function vForm(fid){
    <label class="cb" data-tip="${esc(TIP.dsgReq)}"><input type="checkbox" id="fr_${c.key}" ${c.requerido?'checked':''} onchange="A.fSet('${fid}',${i},'requerido',this.checked)">Requerido</label>
    <label class="cb" data-tip="${esc(TIP.dsgVisible)}"><input type="checkbox" id="fv_${c.key}" ${c.visible!==false?'checked':''} onchange="A.fSet('${fid}',${i},'visible',this.checked,true)">Visible</label></div>
    <div class="hint"><b>${TIPOS_CAMPO[c.tipo]}</b> · ${TIPOS_CAMPO_DESC[c.tipo]}</div>
+   ${(()=>{const af=impactoCampo(fid,c);if(!af.length)return '';const ej=af[0];return `<div class="hint warn" data-tip="${esc('Registros afectados:\n'+af.slice(0,12).map(a=>'· '+a.n.codigo+' '+a.n.nombre+' — '+a.p.todos.map(x=>etiquetaOpcion(c,x).etiqueta).join(', ')).join('\n')+(af.length>12?'\n· …':''))}">⚠ <b>${af.length} registro${af.length>1?'s':''}</b> guarda${af.length>1?'n':''} en este campo más de lo que «${esc(TIPOS_CAMPO[c.tipo])}» puede mostrar (p. ej. «${esc(ej.n.nombre)}» guarda: ${esc(ej.p.todos.map(x=>etiquetaOpcion(c,x).etiqueta).join(', '))}). <b>No se pierde nada</b>: la ficha lo señala con el ícono <span class="mas">${ej.p.clase==='mas'?'+'+ej.p.ocultos.length:'!'}</span>, muestra el dato completo al hacer clic y solo lo cambia si alguien edita el campo.</div>`})()}
    ${['lista','radio','multiple'].includes(c.tipo)?`<div class="line"><span class="note">Opciones ${q(TIP.dsgOrigen)}</span><select id="fo_${c.key}" onchange="A.fOrigen('${fid}',${i},this.value)" data-tip="${esc(TIP.dsgOrigen)}"><option value="" ${!c.catalogo?'selected':''}>Propias de este campo</option>${Object.values(S.meta.catalogos).map(k=>`<option value="${k.id}" ${c.catalogo===k.id?'selected':''}>Lista: ${esc(k.nombre)}</option>`).join('')}</select>${c.catalogo?`<a class="btn sm" href="#/catalogos/${c.catalogo}" data-tip="Abre la Lista de opciones compartida que usa este campo. Los cambios que hagas allí se ven en todos los campos que la usen.">Editar lista</a>`:`<input type="text" id="fi_${c.key}" style="flex:1;min-width:220px" value="${esc((c.opciones||[]).map(o=>o.etiqueta).join('; '))}" placeholder="Opción 1; Opción 2; Opción 3" oninput="A.fInline('${fid}',${i},this.value)" data-tip="${esc(TIP.dsgInline)}">`}</div>`:''}
    ${c.tipo==='referencia'?`<div class="line"><span class="note">Apunta a nodos de tipo ${q(TIP.dsgRefTipo)}</span><select id="fx_${c.key}" onchange="A.fSet('${fid}',${i},'refTipo',this.value)" data-tip="${esc(TIP.dsgRefTipo)}"><option value="">Cualquiera</option>${S.meta.tipos.map(t=>`<option value="${t.id}" ${c.refTipo===t.id?'selected':''}>${esc(t.nombre)}</option>`).join('')}</select></div>`:''}
    <div class="line"><span class="note">Mostrar solo si ${q(TIP.dsgCond)}</span><select id="fc_${c.key}" onchange="A.fCond('${fid}',${i},'campo',this.value)" data-tip="${esc(TIP.dsgCond)}"><option value="">(siempre)</option>${keys.filter(k=>k!==c.key).map(k=>`<option value="${k}" ${c.visibleSi?.campo===k?'selected':''}>${esc(f.campos.find(x=>x.key===k).label)}</option>`).join('')}</select>${c.visibleSi?.campo?`<span class="note">=</span><input type="text" id="fcv_${c.key}" value="${esc(c.visibleSi.valor)}" placeholder="valor (true, en_curso…)" oninput="A.fCond('${fid}',${i},'valor',this.value)" data-tip="${esc(TIP.dsgCondValor)}">`:''}
@@ -877,7 +912,7 @@ function vAyuda(){
   <dt>Historial</dt><dd>${esc(TIP.tabHistorial)}</dd>
   <dt>Código</dt><dd>${esc(TIP.codigo)}</dd>
   <dt>Ubicación / path</dt><dd>${esc(TIP.ubicacion)}</dd></dl></div>
- <div class="card glos"><h2>Tipos de campo <span class="tag fijo">fijo</span></h2><div class="note">Los controles con que se puede construir una pantalla. Elegir uno u otro cambia cómo se captura y cómo se guarda el valor.</div><dl style="margin:0">${dl(TIPOS_CAMPO,(k,v)=>[v,TIPOS_CAMPO_DESC[k]])}</dl></div>
+ <div class="card glos"><h2>Tipos de campo <span class="tag fijo">fijo</span></h2><div class="note">Los controles con que se puede construir una pantalla. Elegir uno u otro cambia cómo se captura y cómo se guarda el valor.</div><div class="hint warn" style="margin:8px 0"><b>Cambiar el tipo de un campo nunca borra lo guardado.</b> El dato se conserva tal cual y el control lo muestra como puede: si un campo con varias personas pasa a lista desplegable o botones de opción, se ve la primera y aparece el ícono <span class="mas">+1</span> junto a la etiqueta; su tooltip explica qué hay detrás y al hacer clic se despliega el dato completo. Un <span class="mas">!</span> indica un valor que el control no puede representar (p. ej. un texto en un campo numérico). Al guardar la ficha solo cambian los campos que se editaron; lo que el control no muestra sigue guardado. El diseñador de pantallas avisa cuántos registros están en esa situación al elegir el tipo.</div><dl style="margin:0">${dl(TIPOS_CAMPO,(k,v)=>[v,TIPOS_CAMPO_DESC[k]])}</dl></div>
  <div class="card glos"><h2>Tipos de opción de menú <span class="tag fijo">fijo</span></h2><div class="note">Las clases de destino que el menú sabe abrir. El destino concreto (qué tipo, qué reporte, qué pantalla) sí es definible.</div><dl style="margin:0">${dl(MENU_TIPOS,(k,v)=>[v.label,v.desc])}</dl></div>
  <div class="card glos"><h2>Pantallas de configuración <span class="tag fijo">fijo</span></h2><div class="note">Las pantallas de diseño que trae el sistema. Una opción de menú de tipo "Pantalla de configuración" apunta a una de ellas.</div><dl style="margin:0">
   <dt>Pantallas <span class="code">formularios</span></dt><dd>Lista de todas las pantallas definidas y acceso a su diseñador.</dd>
@@ -932,11 +967,17 @@ const A={
  nuevoNodo(parentId,tid){popm.style.display='none';const t=tipo(tid);const nombre=prompt(`${labelNuevo(t)}. Nombre:`);if(!nombre)return;const n={id:uid(),tipo:tid,parentId,codigo:siguienteCodigo(parentId,tid),nombre,creado:hoy(),datos:{}};S.datos.nodos.push(n);save();location.hash='#/nodo/'+n.id;toast('Creado '+n.codigo)},
  renombrar(id){const n=nodo(id);const v=prompt('Nuevo nombre:',n.nombre);if(v&&v!==n.nombre){hist(id,'nombre',n.nombre,v);n.nombre=v;save();refresh()}},
  borrarNodo(id){const n=nodo(id);const d=desc(id);if(!confirm(`¿Eliminar "${n.nombre}"${d.length?` y sus ${d.length} internos`:''}?`))return;const ids=new Set([id,...d.map(x=>x.id)]);S.datos.nodos=S.datos.nodos.filter(x=>!ids.has(x.id));S.datos.archivos=S.datos.archivos.filter(a=>!ids.has(a.nodoId));S.datos.historial=S.datos.historial.filter(h=>!ids.has(h.nodoId));save();const cur=(location.hash.match(/^#\/nodo\/([^/]+)/)||[])[1];if(cur&&ids.has(cur))location.hash=n.parentId?'#/nodo/'+n.parentId:'#/arbol';else refresh();toast('Eliminado')},
- guardarNodo(id){const n=nodo(id);const f=formDeTipo(n.tipo);const nuevo=leerForm(f);
-  const falta=f.campos.filter(c=>c.requerido&&c.visible!==false&&!document.querySelector(`.fld[data-key="${c.key}"]`)?.classList.contains('hidden')).find(c=>{if(c.tipo==='archivo')return !archivosCampo(id,c.key).length;const v=nuevo[c.key];return v===''||v===undefined||(Array.isArray(v)&&!v.length)});
+ guardarNodo(id){const n=nodo(id);const f=formDeTipo(n.tipo);const leido=leerForm(f);
+  /* Solo cambian los campos cuyo control fue editado; lo que el control no muestra se conserva (ver proyectar/fusionar) */
+  const nuevo={};f.campos.filter(c=>c.visible!==false&&c.tipo!=='archivo').forEach(c=>{const p=proyectar(c,n.datos[c.key]);if(!mismoValor(leido[c.key],p.visible))nuevo[c.key]=fusionar(c,p,leido[c.key])});
+  const final=c=>c.key in nuevo?nuevo[c.key]:n.datos[c.key];
+  const falta=f.campos.filter(c=>c.requerido&&c.visible!==false&&!document.querySelector(`.fld[data-key="${c.key}"]`)?.classList.contains('hidden')).find(c=>{if(c.tipo==='archivo')return !archivosCampo(id,c.key).length;const v=final(c);return v===''||v===undefined||v===null||(Array.isArray(v)&&!v.length)});
   if(falta){toast(`Falta completar: ${falta.label}`);document.getElementById('c_'+falta.key)?.focus();return}
-  f.campos.forEach(c=>{const a=n.datos[c.key],b=nuevo[c.key];if(JSON.stringify(a??'')!==JSON.stringify(b??'')){const sh=v=>c.tipo==='checkbox'?(v?'Sí':'No'):Array.isArray(v)?v.join(', '):(['lista','radio'].includes(c.tipo)&&v?etiquetaOpcion(c,v).etiqueta:String(v??''));hist(id,c.key,sh(a),sh(b))}});
-  n.datos={...n.datos,...nuevo};save();refresh();toast('Guardado')},
+  const sh=(c,v)=>c.tipo==='checkbox'?(v?'Sí':'No'):Array.isArray(v)?v.map(x=>etiquetaOpcion(c,x).etiqueta).join(', '):(UNICOS.includes(c.tipo)&&v?etiquetaOpcion(c,v).etiqueta:String(v??''));
+  Object.keys(nuevo).forEach(k=>{const c=f.campos.find(c=>c.key===k);hist(id,k,sh(c,n.datos[k]),sh(c,nuevo[k]))});
+  n.datos={...n.datos,...nuevo};save();refresh();toast(Object.keys(nuevo).length?'Guardado':'Sin cambios')},
+ verMas(id){const el=document.getElementById(id+'_mas');if(el)el.hidden=!el.hidden},
+ quitarOculto(nodoId,key,i){const n=nodo(nodoId);const arr=valorLista(n.datos[key]);const c=campoDe(n.tipo,key);const x=arr[i];if(x===undefined||!confirm(`¿Descartar «${etiquetaOpcion(c,x).etiqueta}» del campo "${c?.label||key}"? Ya no se podrá recuperar.`))return;const nv=arr.filter((_,j)=>j!==i);hist(nodoId,key,arr.map(y=>etiquetaOpcion(c,y).etiqueta).join(', '),nv.map(y=>etiquetaOpcion(c,y).etiqueta).join(', '));n.datos[key]=nv.length===1&&UNICOS.includes(c?.tipo)?nv[0]:nv;save();refresh();toast('Valor descartado')},
  /* archivos */
  upName(inp){const f=inp.files?.[0];if(!f)return;document.getElementById('up_nombre').value=f.name;inp.dataset.size=f.size;if(/\.(eml|msg)$/i.test(f.name)){document.getElementById('up_clase').value='email';A.upClase('email')}},
  upClase(v){document.querySelectorAll('.fld.em').forEach(e=>e.classList.toggle('hidden',v!=='email'))},
@@ -947,7 +988,7 @@ const A={
  nuevoForm(){const nombre=prompt('Nombre de la nueva pantalla:');if(!nombre)return;let id='f_'+slug(nombre);while(S.meta.formularios[id])id+='_';S.meta.formularios[id]={id,nombre,campos:[]};save();location.hash='#/form/'+id},
  fNombre(fid,v){form(fid).nombre=v;save()},
  fAdd(fid){const f=form(fid);const label=prompt('Etiqueta del nuevo campo:');if(!label)return;let key=slug(label);while(f.campos.some(c=>c.key===key))key+='_';f.campos.push({key,label,tipo:'texto',requerido:false,visible:true,ancho:'half'});save();refresh();setTimeout(()=>document.getElementById('fl_'+key)?.focus(),0)},
- fSet(fid,i,prop,v,re){const c=form(fid).campos[i];c[prop]=v;if(prop==='tipo'){if(['lista','radio','multiple'].includes(v)&&!c.catalogo&&!c.opciones){const ex=valoresExistentes(fid,c.key);c.opciones=ex.length?ex.map(s=>({valor:s,etiqueta:s})):[{valor:'opcion_1',etiqueta:'Opción 1'},{valor:'opcion_2',etiqueta:'Opción 2'}];if(ex.length)toast(`Opciones creadas a partir de los ${ex.length} valores ya guardados en "${c.label}"`)}}save();re?refresh():refreshPreview(fid)},
+ fSet(fid,i,prop,v,re){const c=form(fid).campos[i];c[prop]=v;if(prop==='tipo'){let ex=[];if(['lista','radio','multiple'].includes(v)&&!c.catalogo&&!c.opciones){ex=valoresExistentes(fid,c.key);c.opciones=ex.length?ex.map(s=>({valor:s,etiqueta:s})):[{valor:'opcion_1',etiqueta:'Opción 1'},{valor:'opcion_2',etiqueta:'Opción 2'}];if(ex.length)toast(`Opciones creadas a partir de los ${ex.length} valores ya guardados en "${c.label}"`)}const af=impactoCampo(fid,c);if(af.length)setTimeout(()=>toast(`${af.length} registro${af.length>1?'s':''} guarda${af.length>1?'n':''} más de lo que «${TIPOS_CAMPO[v]}» muestra en "${c.label}". Se conservan; ver aviso ámbar.`),ex.length?1900:0)}save();re?refresh():refreshPreview(fid)},
  fOrigen(fid,i,v){const c=form(fid).campos[i];if(v){c.catalogo=v;delete c.opciones}else{delete c.catalogo;c.opciones=c.opciones||[{valor:'opcion_1',etiqueta:'Opción 1'}]}save();refresh()},
  fInline(fid,i,v){const c=form(fid).campos[i];const prev=c.opciones||[];c.opciones=v.split(';').map(s=>s.trim()).filter(Boolean).map(s=>prev.find(o=>o.etiqueta===s)||{valor:slug(s),etiqueta:s});save();refreshPreview(fid)},
  fCond(fid,i,prop,v){const c=form(fid).campos[i];if(prop==='campo'){if(!v){delete c.visibleSi;save();refresh();return}c.visibleSi={campo:v,valor:c.visibleSi?.valor||''};save();refresh();return}c.visibleSi.valor=v;save();refreshPreview(fid)},
