@@ -29,7 +29,6 @@ El servidor sirve la carpeta y guarda el estado completo (definición y datos) e
 - La primera vez, sin estado guardado, el servidor arranca con lo que trae `sispla-datos.js` (la semilla real del SISPLA). Después, `datos/estado.json` manda y `sispla-datos.js` deja de usarse.
 - `datos/historial/` conserva copias anteriores (una cada 5 minutos como máximo, 30 en total): si alguien borra o rompe algo, se recupera copiando la que convenga sobre `estado.json` y reiniciando.
 - Si el envío falla (se cayó el servidor, sin red), los cambios siguen en el navegador y el pie ofrece **Reintentar**. Al volver a abrir la demo, se sube lo que sea más nuevo.
-- **Restablecer demo** también reemplaza lo del servidor por la semilla; el estado previo queda en `datos/historial/`.
 - Variables opcionales: `SISPLA_DATOS` (carpeta de datos), `SISPLA_HISTORIAL` (copias a conservar), `SISPLA_INTERVALO` (segundos entre copias).
 - No hay autenticación ni usuarios: cualquiera con acceso a la URL ve y modifica todo. Está pensado para una red interna, una VPN o un proxy (nginx, Caddy, IIS) que ponga usuario y clave delante.
 - Para dejarlo corriendo como servicio: en Linux, una unidad `systemd` con `ExecStart=/usr/bin/node /ruta/sispla-demo/servidor.js` y `Restart=always`; en Windows, [NSSM](https://nssm.cc/) o una tarea programada al inicio. La carpeta `datos/` es lo único que hay que respaldar.
@@ -52,7 +51,5 @@ git commit -m "Estado de la demo"
 ```
 
 En la otra máquina, tras `git pull`, abrir `index.html`: si el archivo es más nuevo que lo guardado en ese navegador, la demo arranca con esos valores y lo avisa. Si alguien envía un `sispla-datos.js` por otro medio, el botón **Cargar…** lo abre y reemplaza lo que hay.
-
-**Restablecer demo** también se escribe en el archivo enlazado: si se quiere conservar lo ingresado, hacer antes un `git commit` de `sispla-datos.js`.
 
 No hay pruebas automatizadas.
