@@ -514,12 +514,30 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 /* ============ tooltips ============ */
 const tipEl=document.createElement('div');tipEl.id='tip';document.body.appendChild(tipEl);
 const popm=document.createElement('div');popm.id='popm';document.body.appendChild(popm);document.addEventListener('click',e=>{if(!e.target.closest('#popm'))popm.style.display='none'});
-function showTip(el){const t=el.getAttribute('data-tip');if(!t)return;tipEl.textContent=t;tipEl.style.display='block';const w=Math.min(380,window.innerWidth-24);tipEl.style.width=w+'px';const r=el.getBoundingClientRect();let x=r.left,y=r.bottom+8;if(x+w>window.innerWidth-12)x=window.innerWidth-12-w;if(x<12)x=12;const h=tipEl.offsetHeight;if(y+h>window.innerHeight-8)y=Math.max(8,r.top-h-8);tipEl.style.left=x+'px';tipEl.style.top=y+'px'}
+function showTip(el){const t=el.getAttribute('data-tip');if(!t)return;tipEl.textContent=t;tipEl.style.display='block';let w=Math.min(380,window.innerWidth-24);tipEl.style.width=w+'px';if(tipEl.offsetHeight>window.innerHeight-16){w=Math.min(560,window.innerWidth-24);tipEl.style.width=w+'px'} /* un texto muy largo se ensancha antes que desbordar la ventana */
+const r=el.getBoundingClientRect(),W=window.innerWidth,H=window.innerHeight,h=tipEl.offsetHeight;let x=r.left,y=r.bottom+8;
+if(y+h>H-8){if(r.top-h-8>=8)y=r.top-h-8; /* no cabe debajo: encima */
+ else{y=Math.max(8,Math.min(r.top,H-8-h));x=r.right+8+w<=W-12?r.right+8:r.left-w-8>=12?r.left-w-8:x}} /* tampoco encima: a un costado, sin tapar el elemento */
+if(x+w>W-12)x=W-12-w;if(x<12)x=12;tipEl.style.left=x+'px';tipEl.style.top=y+'px'}
 function hideTip(){tipEl.style.display='none'}
 document.addEventListener('mouseover',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');if(el)showTip(el);else hideTip()});
 document.addEventListener('focusin',e=>{const el=e.target.closest&&e.target.closest('.q[data-tip]');if(el)showTip(el)});
 document.addEventListener('focusout',hideTip);
-document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('.q');if(el){showTip(el);e.stopPropagation()}else hideTip()});
+document.addEventListener('click',e=>{const el=e.target.closest&&e.target.closest('.q');if(el){showTip(el);e.stopPropagation();if(el.closest('label'))e.preventDefault()}else hideTip()});
+/* Un tooltip largo sobre un control (input, select, textarea o su etiqueta) lo taparía al desplegarse, justo cuando el usuario quiere editarlo.
+   A partir de TIP_LARGO caracteres (o si tiene varios párrafos) el texto pasa a un ícono ? junto al control; el control queda sin tooltip propio. */
+const TIP_LARGO=160;
+function tipsAIcono(root){
+ root.querySelectorAll('input[data-tip],select[data-tip],textarea[data-tip],label[data-tip]').forEach(el=>{
+  const t=el.getAttribute('data-tip');if(!t||(t.length<=TIP_LARGO&&!t.includes('\n')))return;
+  el.removeAttribute('data-tip');
+  const lab=el.tagName==='LABEL'?el:(el.id?root.querySelector(`label[for="${CSS.escape(el.id)}"]`):null);
+  const fld=(lab||el).closest('.fld');
+  if(fld&&[...fld.querySelectorAll('.q')].some(q=>q.getAttribute('data-tip')===t))return; /* el campo ya tiene un ? con ese mismo texto */
+  const ic=document.createElement('span');ic.className='q';ic.tabIndex=0;ic.setAttribute('data-tip',t);ic.textContent='?';
+  if(lab)lab.appendChild(ic);else el.insertAdjacentElement('afterend',ic);
+ });
+}
 window.addEventListener('scroll',hideTip,true);
 
 /* ============ acceso al modelo ============ */
@@ -594,7 +612,7 @@ function route(){
  window.scrollTo(0,0);
 }
 function setTop(crumbs,btn){document.getElementById('crumbs').innerHTML=crumbs||'';document.getElementById('topbtn').innerHTML=btn||'';document.querySelector('header').classList.toggle('vacio',!crumbs&&!btn)}
-function view(html){document.getElementById('view').innerHTML=html}
+function view(html){const v=document.getElementById('view');v.innerHTML=html;tipsAIcono(v)}
 function hrefMenu(m){switch(m.tipo){case 'arbol':return '#/arbol';case 'lista':return '#/lista/'+m.target;case 'reportes':return '#/reportes';case 'reporte':return '#/reporte/'+m.target;case 'config':return '#/'+m.target;case 'url':return m.target||'#';default:return '#'}}
 function renderNav(){
  const cur=location.hash||'#/arbol';
@@ -792,7 +810,7 @@ function vForm(fid){
 }
 /* Valores distintos ya guardados en un campo, en todos los nodos cuyo tipo usa esta pantalla (para sembrar opciones al convertirlo en lista) */
 function valoresExistentes(fid,key){const usa=S.meta.tipos.filter(t=>t.formId===fid).map(t=>t.id);const out=[];S.datos.nodos.filter(n=>usa.includes(n.tipo)).forEach(n=>valorLista(n.datos[key]).forEach(x=>{if(typeof x==='object')return;const s=String(x).trim();if(s&&!out.includes(s))out.push(s)}));return out.slice(0,60)}
-function refreshPreview(fid){const f=form(fid);const usa=S.meta.tipos.filter(t=>t.formId===fid);const ej=S.datos.nodos.find(n=>usa.some(t=>t.id===n.tipo));const p=document.getElementById('preview');if(p){p.innerHTML=renderForm(f,ej?ej.datos:{},'pv_');aplicarCondiciones(f)}}
+function refreshPreview(fid){const f=form(fid);const usa=S.meta.tipos.filter(t=>t.formId===fid);const ej=S.datos.nodos.find(n=>usa.some(t=>t.id===n.tipo));const p=document.getElementById('preview');if(p){p.innerHTML=renderForm(f,ej?ej.datos:{},'pv_');tipsAIcono(p);aplicarCondiciones(f)}}
 
 /* ============ diseño: tipos ============ */
 function vTipos(){
@@ -893,7 +911,7 @@ function vJson(tab){
 function vAyuda(){
  setTop(`<span class="cur">Ayuda y glosario</span>`);
  const dl=(dic,fmt)=>Object.entries(dic).map(([k,v])=>`<dt>${esc(fmt(k,v)[0])} <span class="code">${k}</span></dt><dd>${esc(fmt(k,v)[1])}</dd>`).join('');
- view(`<div class="page-head"><div><h1>Ayuda y glosario</h1><div class="meta">Qué es cada cosa, de dónde sale y quién la define. En toda pantalla, pasa el mouse por un <span class="q" style="margin:0">?</span> o por cualquier control para ver su explicación.</div></div></div>
+ view(`<div class="page-head"><div><h1>Ayuda y glosario</h1><div class="meta">Qué es cada cosa, de dónde sale y quién la define. En toda pantalla, pasa el mouse por un <span class="q" style="margin:0">?</span> o por cualquier control para ver su explicación. Cuando la explicación de un control es larga, va en el <span class="q" style="margin:0">?</span> junto a él, para que al desplegarse no tape lo que estás editando.</div></div></div>
  <div class="stack">
  <div class="card"><h2>Dos clases de cosas</h2><div class="kv" style="row-gap:10px">
   <dt><span class="tag fijo">fijo</span></dt><dd>Viene programado en el sistema. Son los "ladrillos": los tipos de campo que existen, las clases de destino que puede abrir el menú, las pantallas de configuración, las columnas Código / Nombre / Ubicación, las clases de archivo. No se crean ni se cambian desde una pantalla; cambiarlos es trabajo de desarrollo.</dd>
