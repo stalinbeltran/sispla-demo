@@ -32,6 +32,7 @@ El servidor sirve la carpeta y guarda el estado completo (definición y datos) e
 - Variables opcionales: `SISPLA_DATOS` (carpeta de datos), `SISPLA_HISTORIAL` (copias a conservar), `SISPLA_INTERVALO` (segundos entre copias).
 - No hay autenticación ni usuarios: cualquiera con acceso a la URL ve y modifica todo. Está pensado para una red interna, una VPN o un proxy (nginx, Caddy, IIS) que ponga usuario y clave delante.
 - Para dejarlo corriendo como servicio: en Linux, una unidad `systemd` con `ExecStart=/usr/bin/node /ruta/sispla-demo/servidor.js` y `Restart=always`; en Windows, [NSSM](https://nssm.cc/) o una tarea programada al inicio. La carpeta `datos/` es lo único que hay que respaldar.
+- En Linux, `herramientas/servicio.sh` reúne lo que un lanzador necesita, con el puerto en un solo sitio (`PORT`, 8080 si no está): `instalar` abre el puerto en `ufw`, `servir` arranca el servidor (para el `ExecStart`), y `url` imprime la dirección pública **sólo** si el puerto está abierto y el servidor contesta (si no, sale con 1 y dice por qué). `SISPLA_SECO=1` enseña la orden sin ejecutarla, y `herramientas/probar-servicio.sh` lo comprueba. Así corre en el `mini` de la flota ([`services/sispla-demo.json`](https://github.com/stalinbeltran/digital-ocean-dropplet-auto-launching/blob/main/services/sispla-demo.json) del lanzador).
 
 ## Guardar lo que se ingresa (y llevarlo a otra máquina)
 

@@ -24,7 +24,7 @@ const MAX_CUERPO = 25 * 1024 * 1024; /* el estado de la demo pesa unos cientos d
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.md': 'text/markdown; charset=utf-8', '.txt': 'text/plain; charset=utf-8',
   '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
-const NO_SERVIR = ['datos', '.git', 'node_modules', 'herramientas/db', 'servidor.js', 'package.json']; /* nunca se exponen por HTTP */
+const NO_SERVIR = ['datos', '.git', 'node_modules', 'herramientas/db', 'servidor.js', 'package.json', '.env']; /* nunca se exponen por HTTP; .env por si un lanzador lo escribe junto al código */
 
 fs.mkdirSync(HISTORIAL, { recursive: true });
 
@@ -86,7 +86,8 @@ async function api(req, res, ruta) {
 
 function estatico(req, res, ruta) {
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); return res.end(); }
-  let rel = decodeURIComponent(ruta).replace(/^\/+/, '') || 'index.html';
+  let rel;
+  try { rel = decodeURIComponent(ruta).replace(/^\/+/, '') || 'index.html'; } catch (e) { res.writeHead(400); return res.end('Ruta inválida'); } /* un %-mal-formado no debe tumbar el servidor */
   const abs = path.normalize(path.join(RAIZ, rel));
   const dentro = abs.startsWith(RAIZ + path.sep);
   const relNorm = path.relative(RAIZ, abs).split(path.sep).join('/');
