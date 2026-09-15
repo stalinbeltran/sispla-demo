@@ -506,7 +506,12 @@ const rutaStr=id=>ancestros(id).map(n=>n.nombre).join(' › ');
 const desc=id=>{const out=[];const rec=p=>hijos(p).forEach(h=>{out.push(h);rec(h.id)});rec(id);return out};
 const archivosDe=id=>S.datos.archivos.filter(a=>a.nodoId===id);
 function opciones(f){if(f.catalogo&&S.meta.catalogos[f.catalogo])return S.meta.catalogos[f.catalogo].opciones;return f.opciones||[]}
-function etiquetaOpcion(f,v){const o=opciones(f).find(o=>o.valor===v);return o?o:{valor:v,etiqueta:v}}
+function etiquetaOpcion(f,v){const o=opciones(f).find(o=>String(o.valor)===String(v));return o?o:{valor:v,etiqueta:String(v)}}
+/* Un valor guardado bajo otro tipo de campo (texto→lista, múltiple→lista, lista→múltiple…) se adapta en vez de perderse */
+const valorUnico=v=>Array.isArray(v)?(v.length?v[0]:''):(v===undefined||v===null?'':v);
+const valorLista=v=>Array.isArray(v)?v:(v===undefined||v===null||v===''?[]:[v]);
+const enOpciones=(f,v)=>opciones(f).some(o=>String(o.valor)===String(v));
+const opcionFuera=(f,v)=>enOpciones(f,v)||v===''||v===undefined||v===null?[]:[{valor:v,etiqueta:`${etiquetaOpcion(f,v).etiqueta} (valor actual, fuera de la lista)`,fuera:true}];
 function campoDe(tid,key){return formDeTipo(tid)?.campos.find(c=>c.key===key)}
 function fmtNum(n){return Number(n).toLocaleString('es-PE')}
 function fmtBytes(b){return b>1e6?(b/1e6).toFixed(1)+' MB':Math.round(b/1e3)+' KB'}
@@ -516,8 +521,8 @@ function mostrarValor(f,v,n){
  if(f.tipo==='archivo'){const k=n?archivosCampo(n.id,f.key).length:0;return k?`${k} archivo${k>1?'s':''}`:'<span class="note">—</span>'}
  if(v===undefined||v===null||v==='')return '<span class="note">—</span>';
  switch(f.tipo){
-  case 'lista':case 'radio':return chip(f,v);
-  case 'multiple':return (Array.isArray(v)?v:[v]).map(x=>chip(f,x)).join(' ');
+  case 'lista':case 'radio':return chip(f,valorUnico(v));
+  case 'multiple':return valorLista(v).map(x=>chip(f,x)).join(' ');
   case 'checkbox':return v?'Sí':'No';
   case 'numero':return fmtNum(v);
   case 'referencia':{const n=nodo(v);return n?`<a href="#/nodo/${n.id}">${esc(n.nombre)}</a>`:esc(v)}
@@ -653,9 +658,9 @@ function renderForm(f,data,pre='c_',nodoId){
    case 'textolargo':ctl=`<textarea ${at}>${esc(v)}</textarea>`;break;
    case 'numero':ctl=`<input type="number" ${at} value="${esc(v)}">`;break;
    case 'fecha':ctl=`<input type="date" ${at} value="${esc(v)}">`;break;
-   case 'lista':ctl=`<select ${at}><option value="">— elegir —</option>${opciones(c).map(o=>`<option value="${esc(o.valor)}" ${o.valor===v?'selected':''}>${esc(o.etiqueta)}</option>`).join('')}</select>`;break;
-   case 'radio':ctl=`<div class="opts">${opciones(c).map((o,i)=>`<label><input type="radio" name="${c.key}" id="${id}_${i}" value="${esc(o.valor)}" ${o.valor===v?'checked':''}>${esc(o.etiqueta)}</label>`).join('')}</div>`;break;
-   case 'multiple':{const arr=Array.isArray(v)?v:[];ctl=`<div class="opts">${opciones(c).map((o,i)=>`<label><input type="checkbox" name="${c.key}" id="${id}_${i}" value="${esc(o.valor)}" ${arr.includes(o.valor)?'checked':''}>${esc(o.etiqueta)}</label>`).join('')}</div>`;break}
+   case 'lista':{const u=valorUnico(v);ctl=`<select ${at}><option value="">— elegir —</option>${[...opciones(c),...opcionFuera(c,u)].map(o=>`<option value="${esc(o.valor)}" ${String(o.valor)===String(u)?'selected':''}${o.fuera?' data-tip="Este valor se guardó cuando el campo era de otro tipo o con otras opciones. Se conserva tal cual hasta que elijas otra opción."':''}>${esc(o.etiqueta)}</option>`).join('')}</select>`;break}
+   case 'radio':{const u=valorUnico(v);ctl=`<div class="opts">${[...opciones(c),...opcionFuera(c,u)].map((o,i)=>`<label><input type="radio" name="${c.key}" id="${id}_${i}" value="${esc(o.valor)}" ${String(o.valor)===String(u)?'checked':''}>${esc(o.etiqueta)}</label>`).join('')}</div>`;break}
+   case 'multiple':{const arr=valorLista(v).map(String);const extra=arr.filter(x=>!enOpciones(c,x)).map(x=>({valor:x,etiqueta:`${x} (valor actual, fuera de la lista)`}));ctl=`<div class="opts">${[...opciones(c),...extra].map((o,i)=>`<label><input type="checkbox" name="${c.key}" id="${id}_${i}" value="${esc(o.valor)}" ${arr.includes(String(o.valor))?'checked':''}>${esc(o.etiqueta)}</label>`).join('')}</div>`;break}
    case 'checkbox':ctl=`<div class="opts"><label><input type="checkbox" ${at} ${v?'checked':''}>Sí</label></div>`;break;
    case 'referencia':{const ns=S.datos.nodos.filter(n=>!c.refTipo||n.tipo===c.refTipo);ctl=`<select ${at}><option value="">— ninguno —</option>${ns.map(n=>`<option value="${n.id}" ${n.id===v?'selected':''}>${esc(n.codigo)} · ${esc(n.nombre)}</option>`).join('')}</select>`;break}
    default:ctl=`<input type="text" ${at} value="${esc(v)}">`;
@@ -729,6 +734,8 @@ function vForm(fid){
  <div class="card"><h3>Vista previa ${q(TIP.dsgPreview)}</h3><div class="note" style="margin-bottom:10px">${ejemplo?`Con los datos de <a href="#/nodo/${ejemplo.id}">${esc(ejemplo.nombre)}</a>`:'Sin datos de ejemplo'}</div><div id="preview">${renderForm(f,ejemplo?ejemplo.datos:{},'pv_')}</div></div></div>`);
  aplicarCondiciones(f);
 }
+/* Valores distintos ya guardados en un campo, en todos los nodos cuyo tipo usa esta pantalla (para sembrar opciones al convertirlo en lista) */
+function valoresExistentes(fid,key){const usa=S.meta.tipos.filter(t=>t.formId===fid).map(t=>t.id);const out=[];S.datos.nodos.filter(n=>usa.includes(n.tipo)).forEach(n=>valorLista(n.datos[key]).forEach(x=>{if(typeof x==='object')return;const s=String(x).trim();if(s&&!out.includes(s))out.push(s)}));return out.slice(0,60)}
 function refreshPreview(fid){const f=form(fid);const usa=S.meta.tipos.filter(t=>t.formId===fid);const ej=S.datos.nodos.find(n=>usa.some(t=>t.id===n.tipo));const p=document.getElementById('preview');if(p){p.innerHTML=renderForm(f,ej?ej.datos:{},'pv_');aplicarCondiciones(f)}}
 
 /* ============ diseño: tipos ============ */
@@ -920,9 +927,9 @@ const A={
  nuevoForm(){const nombre=prompt('Nombre de la nueva pantalla:');if(!nombre)return;let id='f_'+slug(nombre);while(S.meta.formularios[id])id+='_';S.meta.formularios[id]={id,nombre,campos:[]};save();location.hash='#/form/'+id},
  fNombre(fid,v){form(fid).nombre=v;save()},
  fAdd(fid){const f=form(fid);const label=prompt('Etiqueta del nuevo campo:');if(!label)return;let key=slug(label);while(f.campos.some(c=>c.key===key))key+='_';f.campos.push({key,label,tipo:'texto',requerido:false,visible:true,ancho:'half'});save();refresh();setTimeout(()=>document.getElementById('fl_'+key)?.focus(),0)},
- fSet(fid,i,prop,v,re){const c=form(fid).campos[i];c[prop]=v;if(prop==='tipo'){if(['lista','radio','multiple'].includes(v)&&!c.catalogo&&!c.opciones)c.opciones=[{valor:'opcion_1',etiqueta:'Opción 1'},{valor:'opcion_2',etiqueta:'Opción 2'}]}save();re?refresh():refreshPreview(fid)},
+ fSet(fid,i,prop,v,re){const c=form(fid).campos[i];c[prop]=v;if(prop==='tipo'){if(['lista','radio','multiple'].includes(v)&&!c.catalogo&&!c.opciones){const ex=valoresExistentes(fid,c.key);c.opciones=ex.length?ex.map(s=>({valor:s,etiqueta:s})):[{valor:'opcion_1',etiqueta:'Opción 1'},{valor:'opcion_2',etiqueta:'Opción 2'}];if(ex.length)toast(`Opciones creadas a partir de los ${ex.length} valores ya guardados en "${c.label}"`)}}save();re?refresh():refreshPreview(fid)},
  fOrigen(fid,i,v){const c=form(fid).campos[i];if(v){c.catalogo=v;delete c.opciones}else{delete c.catalogo;c.opciones=c.opciones||[{valor:'opcion_1',etiqueta:'Opción 1'}]}save();refresh()},
- fInline(fid,i,v){form(fid).campos[i].opciones=v.split(';').map(s=>s.trim()).filter(Boolean).map(s=>({valor:slug(s),etiqueta:s}));save();refreshPreview(fid)},
+ fInline(fid,i,v){const c=form(fid).campos[i];const prev=c.opciones||[];c.opciones=v.split(';').map(s=>s.trim()).filter(Boolean).map(s=>prev.find(o=>o.etiqueta===s)||{valor:slug(s),etiqueta:s});save();refreshPreview(fid)},
  fCond(fid,i,prop,v){const c=form(fid).campos[i];if(prop==='campo'){if(!v){delete c.visibleSi;save();refresh();return}c.visibleSi={campo:v,valor:c.visibleSi?.valor||''};save();refresh();return}c.visibleSi.valor=v;save();refreshPreview(fid)},
  fMov(fid,i,d){const a=form(fid).campos;const j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];save();refresh()},
  fDel(fid,i){const c=form(fid).campos[i];if(!confirm(`¿Quitar el campo "${c.label}" de la pantalla? Los datos ya guardados en ese campo se conservan en los documentos.`))return;form(fid).campos.splice(i,1);save();refresh()},
