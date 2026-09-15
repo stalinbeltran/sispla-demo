@@ -30,8 +30,8 @@ a{color:var(--accent)}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 .app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
-aside{background:var(--side);color:var(--side-ink);display:flex;flex-direction:column;padding-block:18px;padding-inline:0}
-.brand{padding:0 18px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+aside{background:var(--side);color:var(--side-ink);display:flex;flex-direction:column;padding-block:18px;padding-inline:0;position:sticky;top:0;height:100vh;overflow-y:auto} /* ocupa la ventana y se desplaza por dentro: el pie con los botones queda siempre abajo, y solo baja si el menú necesita todo el alto */
+.brand{flex:none;padding:0 18px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
 .brand b{font-size:17px;letter-spacing:.02em;display:block}
 .brand span{font-size:11.5px;color:var(--side-muted);text-transform:uppercase;letter-spacing:.08em}
 nav{padding:10px 8px;display:flex;flex-direction:column;gap:2px;flex:1}
@@ -41,7 +41,11 @@ nav a.on{background:var(--side-active);color:#fff}
 nav a.sub{padding-left:28px;font-size:13px}
 nav .grp{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--side-muted);padding:14px 10px 4px}
 nav .ic{width:16px;text-align:center;opacity:.85;font-size:12px}
-.side-foot{padding:10px 18px 0;font-size:11.5px;color:var(--side-muted);border-top:1px solid rgba(255,255,255,.08)}
+.side-sw{flex:none;margin-top:auto;padding:10px 8px 0;border-top:1px solid rgba(255,255,255,.08)} /* botón que alterna menú principal / configuración: siempre visible, aun con el menú plegado */
+.side-sw button{width:100%;display:flex;align-items:center;gap:9px;background:none;border:1px solid rgba(255,255,255,.18);color:var(--side-ink);border-radius:6px;padding:7px 10px;font-size:13px;text-align:left}
+.side-sw button:hover{background:rgba(255,255,255,.08)}
+.side-sw button .ic{width:16px;text-align:center;font-size:12px}
+.side-foot{flex:none;padding:10px 18px 0;font-size:11.5px;color:var(--side-muted);border-top:1px solid rgba(255,255,255,.08)}
 .side-foot button{background:none;border:1px solid rgba(255,255,255,.18);color:var(--side-ink);border-radius:5px;padding:4px 8px;font-size:11.5px;margin-top:6px}
 .brand-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .menu-tg{background:none;border:0;color:var(--side-muted);border-radius:6px;padding:4px;display:flex;align-items:center;justify-content:center;flex:none}
@@ -54,6 +58,7 @@ nav .ic{width:16px;text-align:center;opacity:.85;font-size:12px}
 .app.menu-plegado nav a{justify-content:center;padding:9px 0}
 .app.menu-plegado nav a.sub{padding-left:0;opacity:.7}
 .app.menu-plegado nav .ic{font-size:14px;opacity:1}
+.app.menu-plegado .side-sw{padding-inline:6px}.app.menu-plegado .side-sw button{justify-content:center;padding:9px 0}.app.menu-plegado .side-sw .lbl{display:none}.app.menu-plegado .side-sw .ic{font-size:14px}
 main{min-width:0;display:flex;flex-direction:column}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:10px;padding-inline:24px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;flex-wrap:wrap}
 #topbtn{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -198,7 +203,7 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padd
 .kv dt{color:var(--muted)}.kv dd{margin:0}
 .sw{width:14px;height:14px;border-radius:3px;border:1px solid var(--line);display:inline-block;vertical-align:middle}
 input[type=color]{width:28px;height:24px;padding:0;border:1px solid var(--line);border-radius:4px;background:none}
-@media (max-width:760px){.app,.app.menu-plegado{grid-template-columns:1fr}.menu-tg{display:none}.app.menu-plegado nav a .lbl,.app.menu-plegado .side-foot,.app.menu-plegado nav .grp,.app.menu-plegado .brand span{display:initial}.app.menu-plegado nav a{justify-content:flex-start;padding:7px 10px}nav .ic.alt{visibility:hidden}aside{flex-direction:row;flex-wrap:wrap;padding-block:8px}nav{flex-direction:row;flex-wrap:wrap}nav .grp{width:100%;padding-top:6px}.brand{border:0}.side-foot{border:0}}
+@media (max-width:760px){.app,.app.menu-plegado{grid-template-columns:1fr}.menu-tg{display:none}.app.menu-plegado nav a .lbl,.app.menu-plegado .side-foot,.app.menu-plegado nav .grp,.app.menu-plegado .brand span{display:initial}.app.menu-plegado nav a{justify-content:flex-start;padding:7px 10px}nav .ic.alt{visibility:hidden}aside{position:static;height:auto;overflow:visible;flex-direction:row;flex-wrap:wrap;padding-block:8px}nav{flex-direction:row;flex-wrap:wrap}nav .grp{width:100%;padding-top:6px}.brand{border:0}.side-sw{border:0;margin-top:0;width:100%}.side-foot{border:0}}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
 
@@ -206,6 +211,7 @@ input[type=color]{width:28px;height:24px;padding:0;border:1px solid var(--line);
   <aside>
     <div class="brand"><div class="brand-row"><b>SisPla</b><button class="menu-tg" id="menutg" onclick="A.menuToggle()" aria-label="Plegar o desplegar el menú"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="9" y1="4" x2="9" y2="20"/></svg></button></div><span>Árbol multinivel · demo</span></div>
     <nav id="nav"></nav>
+    <div class="side-sw"><button id="menusw" onclick="A.menuConfigToggle()"></button></div>
     <div class="side-foot">Todo lo que ves se genera desde el JSON de definición. Los cambios se guardan en este navegador.<br><a href="#/ayuda" style="color:var(--side-ink)">Ayuda y glosario</a><br><button onclick="A.reset()" data-tip="Borra todo lo que hayas cambiado en este navegador (datos y definiciones) y vuelve al ejemplo inicial de la demo. No afecta a nadie más: la demo vive solo en tu navegador.">Restablecer demo</button> <button onclick="A.guardarCopia()" data-tip="Descarga sispla-datos.js con todo lo que ves ahora (definición y datos). Guárdalo junto a index.html y súbelo al repositorio: en cualquier otra máquina la demo arrancará con estos mismos valores, siempre que el archivo sea más nuevo que lo guardado en ese navegador.">Guardar copia</button></div>
   </aside>
   <main>
@@ -500,6 +506,7 @@ function route(){
  const h=location.hash.replace(/^#\/?/,'');const [a,b,c]=h.split('/');
  const V={ '':vArbol, arbol:vArbol, nodo:()=>vNodo(b,c||'datos'), lista:()=>vLista(b), form:()=>vForm(b), formularios:vFormularios, tipos:vTipos, catalogos:()=>vCatalogos(b), menu:vMenu, reportes:vReportes, reporte:()=>vReporte(b,c), json:()=>vJson(b), ayuda:vAyuda };
  (V[a]||vArbol)();
+ menuConfig=RUTAS_CONFIG.includes(a); /* al entrar a una vista de configuración se muestra ese menú, y al volver a una principal, el principal */
  renderNav();hideTip();popm.style.display='none';
  window.scrollTo(0,0);
 }
@@ -508,13 +515,19 @@ function view(html){document.getElementById('view').innerHTML=html}
 function hrefMenu(m){switch(m.tipo){case 'arbol':return '#/arbol';case 'lista':return '#/lista/'+m.target;case 'reportes':return '#/reportes';case 'reporte':return '#/reporte/'+m.target;case 'config':return '#/'+m.target;case 'url':return m.target||'#';default:return '#'}}
 function renderNav(){
  const cur=location.hash||'#/arbol';
- document.getElementById('nav').innerHTML=S.meta.menu.filter(m=>m.visible!==false).map(m=>{
+ const items=S.meta.menu.filter(m=>m.visible!==false);
+ /* una opción es de configuración si su tipo es config; un título de grupo va con la primera opción real que le sigue */
+ const esConfig=i=>{const m=items[i];if(m.tipo!=='grupo')return m.tipo==='config';const nx=items.slice(i+1).find(x=>x.tipo!=='grupo');return !!nx&&nx.tipo==='config'};
+ document.getElementById('nav').innerHTML=items.filter((m,i)=>esConfig(i)===menuConfig).map(m=>{
   if(m.tipo==='grupo')return `<div class="grp" data-tip="${esc('Título de grupo del menú: no es un enlace, solo separa un bloque de opciones. Se define en Configuración › Menú.')}">${esc(m.label)}</div>`;
   const h=hrefMenu(m);const on=cur===h||(h==='#/arbol'&&(cur.startsWith('#/nodo')||cur==='#/'));
   const mt=MENU_TIPOS[m.tipo]||{label:m.tipo,desc:''};
   return `<a href="${esc(h)}" class="${on?'on':''} ${m.sub?'sub':''}" ${m.tipo==='url'?'target="_blank" rel="noopener"':''} data-tip="${esc(`Opción de menú "${m.label}" · tipo: ${mt.label}. ${mt.desc}\n\nEsta opción no está programada: se define en Configuración › Menú, donde puedes cambiar su texto, orden, destino o quitarla.`)}">${m.icono?`<span class="ic">${esc(m.icono)}</span>`:`<span class="ic alt">${esc(menuPlegado?(m.label.trim()[0]||'·'):'')}</span>`}<span class="lbl">${esc(m.label)}</span></a>`;
  }).join('');
  document.querySelector('.app').classList.toggle('menu-plegado',menuPlegado);
+ const sw=document.getElementById('menusw');
+ sw.innerHTML=menuConfig?'<span class="ic">◀</span><span class="lbl">Menú principal</span>':'<span class="ic">⚙</span><span class="lbl">Configuración</span>';
+ sw.setAttribute('data-tip',menuConfig?'Vuelve al menú principal (árbol, listas y reportes). Los menús son excluyentes: se ve uno u otro.':'Muestra el menú de configuración del app (pantallas, tipos de nodo, listas, menú, JSON y ayuda) en lugar del menú principal.');
  const tg=document.getElementById('menutg');
  tg.setAttribute('data-tip',menuPlegado?'Despliega el menú lateral con sus textos.':'Reduce el menú lateral a una franja de íconos para dar más espacio a la ficha y al árbol. Pasa el mouse por un ícono para ver qué es. La elección se recuerda en este navegador.');
 }
@@ -528,6 +541,8 @@ const designBtn=(href,txt,tip)=>`<a class="btn design" href="${href}" data-tip="
 const designBar=txt=>`<div class="design-bar"><b data-tip="${esc(TIP.diseñoBar)}">Modo diseño</b><span>${txt} Los cambios se aplican de inmediato y quedan escritos en el JSON de definición. Pasa el mouse por cualquier <span class="q" style="margin:0">?</span> para saber qué es cada cosa.</span></div>`;
 
 /* ============ vista: árbol ============ */
+const RUTAS_CONFIG=['form','formularios','tipos','catalogos','menu','json','ayuda']; /* vistas que pertenecen a la configuración del app */
+let menuConfig=false; /* qué menú se ve: false = principal, true = configuración (excluyentes); se ajusta solo al navegar */
 let menuPlegado=true;try{menuPlegado=localStorage.getItem(LS+'-menu')!=='0'}catch(e){} /* menú lateral reducido a íconos; plegado por defecto */
 let ultimoNodo=null,ultimoPendiente=false;try{ultimoNodo=localStorage.getItem(LS+'-ultimo');ultimoPendiente=!!ultimoNodo}catch(e){} /* último nodo abierto: se resalta en la vista principal */
 const PAG=10; /* nodos raíz por página en el árbol */
@@ -843,6 +858,7 @@ const A={
   const ul=el.closest('li').querySelector(':scope > ul');if(!ul)return;ul.hidden=!ul.hidden;el.textContent=ul.hidden?'▸':'▾';if(ul.hidden)abiertos.delete(id);else abiertos.add(id)},
  desplegarTodo(){S.datos.nodos.forEach(n=>{if(hijos(n.id).length)abiertos.add(n.id)});refresh()},
  plegarTodo(){abiertos.clear();refresh()},
+ menuConfigToggle(){menuConfig=!menuConfig;renderNav();hideTip()},
  menuToggle(){menuPlegado=!menuPlegado;try{localStorage.setItem(LS+'-menu',menuPlegado?'1':'0')}catch(e){}renderNav();hideTip()},
  pag(d){pagina+=d;const b=document.getElementById('treebody');if(b)b.innerHTML=cuerpoArbol()},
  lPag(d){lista.pagina+=d;const b=document.getElementById('listabody');if(b)b.innerHTML=cuerpoLista(lista.tid)},
